@@ -186,3 +186,90 @@ cat data8
 Finally we have a readable file `data8`
 
 Password: `FO5dwFsc0cbaIiH0h8J2eUks2vdTDwAn`
+
+
+## Level 13 → 14
+```bash
+ls
+logout
+```
+After logging in, there is only one file `sshkey.private`, and it's location is known to us now.
+We will use this ssh key to access user `Bandit14`, but we need a copy on our machine.
+
+**The following commands are on our machine, not using the remote connection**
+```bash
+scp -P 2220  bandit13@bandit.labs.overthewire.org:sshkey.private .
+chmod 700 sshkey.private
+ssh -i ./sshkey.private  bandit14@bandit.labs.overthewire.org -p 2220
+```
+`scp` is used to securely copy files from a remote host, using encrypted ssh connection. We copy the file, but it's permissions are wrong, the permissions were set on the host and give an error message when trying to use `ssh` here. So we change it by using `chmod` and then we log into `bandit14`, using the `-i` flag to use a private key.
+
+```bash
+cat /etc/bandit_pass/bandit14
+```
+After logging in, we can find the password on the file that only `Bandit14` can access.
+
+Password: `MU4VWeTyJk8ROof1qqmcBPaLh7lDCPvS`
+
+## Level 14 → 15
+```bash
+nc localhost 30000
+MU4VWeTyJk8ROof1qqmcBPaLh7lDCPvS
+```
+The `nc` command is used for reading a writing data between two networks. We use it to send the password of `Bandit14` to `localhost` at port `30000`, and we get back the next password.
+
+Password: `8xCjnmgoKbGLhHFAZlGE5Tmu4M2tKJQo`
+
+## Level 15 → 16
+```bash
+openssl s_client -connect localhost:30001
+8xCjnmgoKbGLhHFAZlGE5Tmu4M2tKJQo
+```
+`s_client` command on `openssl` is using `SSL/TLS` in order to connect to a remote host. The `-connect` flag is used to state the `host:port`.
+
+Password: `kSkvUpMQ7lBYyCM4GBPvCvT1BfWRy0Dx`
+
+## Level 16 → 17
+```bash
+
+```
+
+`nmap` is a network scanner. It has many uses, but here it is used to scan ports. The `-p` flag is used to search in a port range, and `-sV` flag does a service/version scan. After a little while the scan ends and we get this:
+```bash
+Not shown: 995 closed tcp ports (conn-refused)
+PORT      STATE SERVICE     VERSION
+31046/tcp open  echo
+31518/tcp open  ssl/echo
+31691/tcp open  echo
+31790/tcp open  ssl/unknown
+31960/tcp open  echo
+32000/tcp open  tcpwrapped
+```
+So there are 6 used (open) ports, but only 2 of them use `SSL` protocol. But we can see that port `31518` is only using the echo service, so the port we need is `31790`.
+
+```bash
+openssl s_client -connect localhost:31790 -quiet
+```
+We need the `-quiet` flag because otherwise we get a `KEYUPDATE` error. The server returns a `RSA` private key, we save it on a file on our machine for the next level.
+
+## Level 17 → 18
+```bash
+chmod 700 ./Bandit17/sshkey.private
+ssh -i ./Bandit17/sshkey.private  bandit17@bandit.labs.overthewire.org -p 2220
+ls
+diff passwords.old passwords.new
+```
+The connection is with the `RSA` private key we saved. We see the 2 files, and use `diff` to compare them.
+
+Password: `x2gLTTjFwMOhQ8oWNbMN362QKxfRqGlO`
+
+## Level 18 → 19
+```bash
+ssh bandit18@bandit.labs.overthewire.org -p 2220 ls
+ssh bandit18@bandit.labs.overthewire.org -p 2220 cat readme
+```
+Using `ssh`, it is possible to only execute a command on the host machine. 
+
+Password: `cGWpMaKXVwDUNgPAVJbWYuGHVn9zl3j8`
+
+## Level 19 → 20
