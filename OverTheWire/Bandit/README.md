@@ -273,3 +273,12 @@ Using `ssh`, it is possible to only execute a command on the host machine.
 Password: `cGWpMaKXVwDUNgPAVJbWYuGHVn9zl3j8`
 
 ## Level 19 → 20
+```bash
+./bandit20-do
+./bandit20-do id
+./bandit20-do ls /etc/bandit_pass
+./bandit20-do cat /etc/bandit_pass/bandit20
+```
+First, we run the file with no arguments. It says `Run a command as another user. Example: ./bandit20-do id`, so we then run it to find out we can read as `Bandit20`. We use `cat` to read the next level password in `/etc/bandit_pass/bandit20`
+
+Password: `0qXahG8ZjOVMN9Ghs7iOWsCfZyXOUbYO`
