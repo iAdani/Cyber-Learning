@@ -501,3 +501,127 @@ Password: `s0773xxkk0MXfdqOfPRVr9L3jJBUOgCZ`
 As we are still using the shell as `Bandit26`, we have access to `bandit27-do` that runs a command as `Bandit27`, and therefore have an access to it's password.
 
 Password: `upsNCc7vzaRDx6oZC6GiR6ERwe1MowGB`
+
+## Level 27 → 28
+```bash
+ls
+cd /home/bandit27-git/repo
+
+```
+As we log into `Bandit27`, there are no files and no permission for `/home/bandit27-git/repo`.
+
+```bash
+mktemp -d
+cd /tmp/tmp.YUU9waKZ1A
+git clone ssh://bandit27-git@localhost:2220/home/bandit27-git/repo
+cd repo
+ls -l
+cat README
+```
+We create a temp and clone the repository inside `/home/bandit27-git/repo`. There we find a file `README` with the next password.
+
+Password: `Yz9IpL0sBcCeuG7m9uQFt8ZNpS4HZRcN`
+
+## Level 28 → 29
+```bash
+mktemp -d
+cd /tmp/tmp.ShXRPVv7YI
+git clone ssh://bandit28-git@localhost:2220/home/bandit28-git/repo
+cd repo
+ls -l
+cat README.md
+```
+This is the same as the last level. But now `README.md` contains this:
+```bash
+# Bandit Notes
+Some notes for level29 of bandit.
+
+## credentials
+
+- username: bandit29
+- password: xxxxxxxxxx
+```
+The file contains the password, but not really. We can check the previous versions, maybe in one of them the password exists.
+```bash
+git log
+```
+As we look at the versions, we notice these commits:
+```bash
+commit 674690a00a0056ab96048f7317b9ec20c057c06b (HEAD -> master, origin/master, origin/HEAD)
+Author: Morla Porla <morla@overthewire.org>
+Date:   Thu Apr 10 14:23:19 2025 +0000
+
+    fix info leak
+
+commit fb0df1358b1ff146f581651a84bae622353a71c0
+Author: Morla Porla <morla@overthewire.org>
+Date:   Thu Apr 10 14:23:19 2025 +0000
+
+    add missing data
+```
+'info leak' might be the password. We can check the difference between them to see what 'info leak' was fixed.
+```bash
+git diff 674690a00a0056ab96048f7317b9ec20c057c06b~ 674690a00a0056ab96048f7317b9ec20c057c06b
+```
+This way we can view the diff between the commit `674690a00a0056ab96048f7317b9ec20c057c06b` and it's previous version, which is what `~` does. 
+```bash
+diff --git a/README.md b/README.md
+index d4e3b74..5c6457b 100644
+--- a/README.md
++++ b/README.md
+@@ -4,5 +4,5 @@ Some notes for level29 of bandit.
+ ## credentials
+ 
+ - username: bandit29
+-- password: 4pT1t5DENaYuqnqvadYs1oE4QLCdjmJ7
++- password: xxxxxxxxxx
+```
+We now can see the password for the next level that has been 'fixed'.
+
+Password: `4pT1t5DENaYuqnqvadYs1oE4QLCdjmJ7`
+
+## Level 29 → 30
+We clone the repository to a temp directory, as we did in the last 2 levels.
+Now `README.md` contains this:
+```bash
+# Bandit Notes
+Some notes for bandit30 of bandit.
+
+## credentials
+
+- username: bandit30
+- password: <no passwords in production!>
+```
+The password is not here. But, we can see that the password exist in another file, but not in production, which means not on the master branch.
+```bash
+git log -p
+git branch -a
+```
+We check all the changes between commits on the master, nothing here. But if we check all the branches, with `branch -a`, we get this:
+```bash
+* master
+  remotes/origin/HEAD -> origin/master
+  remotes/origin/dev
+  remotes/origin/master
+  remotes/origin/sploits-dev
+```
+These are all the branches in that repo. From the line `- password: <no passwords in production!>` we are not intrested in the production, we want the `dev` branch.
+```bash
+git checkout remotes/origin/dev
+ls
+cat README.md
+```
+By using `checkout remotes/origin/dev`, we access the `dev` branch and therefore it's files. We print the `README.md` file in this branch:
+```bash
+# Bandit Notes
+Some notes for bandit30 of bandit.
+
+## credentials
+
+- username: bandit30
+- password: qp30ex3VLz5MDG1n91YowTv4Q8l7CDZL
+
+```
+And there is the next password.
+
+Password: `qp30ex3VLz5MDG1n91YowTv4Q8l7CDZL`
