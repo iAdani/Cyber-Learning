@@ -434,3 +434,70 @@ grep -v Wrong response.txt
 We run the shellcode and see the files have been created. Lastly, we know that when the input is wrong, the server response starts with 'Wrong!', so we want to see all the lines that do not contain it in `responses.txt`. One of them was indeed the next password.
 
 Password: `iCi86ttT4KSNe1armKiwbQNmB3YJP3q4`
+
+## Level 25 → 26
+```bash
+ls
+logout
+```
+After logging in, there is only one file `bandit26.sshkey`, which is the `RSA` key for `Bandit26`. 
+
+**The following commands are on our machine, not using the remote connection**
+```bash
+mkdir Bandit26
+scp -P 2220 bandit25@bandit.labs.overthewire.org:bandit26.sshkey ./Bandit26
+ssh -i ./Bandit26/bandit26.sshkey bandit26@bandit.labs.overthewire.org -p 2220 
+```
+As on previous levels, we copy the file from the host to our machine using `scp`, and tring to connect to `Bandit26` with the key, using `ssh -i`. The remote gives a generic welcome message and closes the connection. Trying to directly run commands does not work, it just returns a generic message.
+
+We log into `Bandit25` again using `ssh`.
+```bash
+cat /etc/passwd | grep bandit26
+ls -l /usr/bin/showtext
+cat /usr/bin/showtext
+```
+Every user has his own default shell, and the info about the specific shell is written in `/etc/passwd` for every user, at the end of the line. So we print it using `grep` and find it is in `/usr/bin/showtext`. The file looks like this:
+```bash
+#!/bin/sh
+
+export TERM=linux
+
+exec more ~/text.txt
+exit 0
+
+```
+The `more` command is a tool for viewing text files in the terminal. So, when we connect to `Bandit26`, `showtext` is executed and shows the text inside `text.txt` and then closes the connection. `more` is used to view one page of a text file at a time. `text.txt` is short, so it fits in one page, but if we rescale the terminal window it won't. Now we rescale the terminal to be small and do this:
+
+```bash
+ssh -i ./Bandit26/bandit26.sshkey bandit26@bandit.labs.overthewire.org -p 2220 
+v
+:set shell=/bin/bash
+:shell
+```
+Because the text now doesn't fit, we hit `v` to go into `Vim` mode and edit the file. Now we have access to `Vim` on the target machine, so we set the default shell to `/bin/bash` using `:set` command and then by using `:shell` we have access to the shell on the target machine.
+
+```bash
+ls
+./bandit27-do
+```
+We now see that there is a file called `bandit27-do`. when we run it we get the prompt:
+```bash
+run a command as another user.
+  Example: ./bandit27-do id
+```
+So it must be for the next level.
+```bash
+cat /etc/bandit\_pass/bandit26
+```
+We are using the shell as `Bandit26`, so we can access it's password.
+
+Password: `s0773xxkk0MXfdqOfPRVr9L3jJBUOgCZ`
+
+## Level 26 → 27
+```bash
+/bandit27-do id
+/bandit27-do cat /etc/bandit\_pass/bandit2
+```
+As we are still using the shell as `Bandit26`, we have access to `bandit27-do` that runs a command as `Bandit27`, and therefore have an access to it's password.
+
+Password: `upsNCc7vzaRDx6oZC6GiR6ERwe1MowGB`
