@@ -625,3 +625,91 @@ Some notes for bandit30 of bandit.
 And there is the next password.
 
 Password: `qp30ex3VLz5MDG1n91YowTv4Q8l7CDZL`
+
+## Level 30 → 31
+We first clone the repo as before. This time the `README.md` says:
+```bash
+just an epmty file... muahaha
+```
+Very unuseful and has a typo.
+
+```bash
+git log -p
+git branch -a
+git checkout remotes/origin/master
+git log -p
+```
+There is only an initial commit with the `README.md` file in it in all of the branches.
+```bash
+git tag
+git show secret
+```
+In Git, tags are a way to mark points in the repo's history. Every tag references a specific commit within the project history. A tag has a `name` and a `message`. By using `git tag` we can see all the tags of this repo. We find a tag with the name `secret`, so by using `git show` we view it's message, which is the next password.
+
+Password: `fb5S2xb7bRyFmAvQYQGEqsbhVyJqhnDy`
+
+## Level 31 → 32
+After cloning the repo, `README.md` says:
+```bash
+This time your task is to push a file to the remote repository.
+
+Details:
+    File name: key.txt
+    Content: 'May I come in?'
+    Branch: master
+```
+So our task is to push a file as it says.
+```bash
+ls -la
+cat .gitignore
+```
+We notice the file `.gitignore` in the repo. That file tells Git to automatically ignore specific files or files that fit specific formats. This file contains the format `*.txt`, which means to ignore every file that ends with `.txt`.
+```bash
+rm .gitignore
+echo 'May I come in?' > key.txt
+git commit -am "..."
+git push
+```
+First, we remove `.gitignore`. Then creating `key.txt` as specified, commiting and pushing. In return, we get the next password.
+
+Password: `3O9RfhqyAlVBEZpVb6LYStshZoqoSx5K`
+
+## Level 32 → 33
+After logging in, we get to an `UPPERCASE SHELL`. Trying to execute some commands isn't working.
+
+```bash
+WELCOME TO THE UPPERCASE SHELL
+>> PWD
+sh: 1: PWD: Permission denied
+>> whoami
+sh: 1: WHOAMI: Permission denied
+>> echo asd
+sh: 1: ECHO: Permission denied
+>> ???
+sh: 1: ???: Permission denied
+```
+Looks like we do not have permission to use the `SHELL`.
+```bash
+>> $user
+sh: 1: bandit32: Permission denied
+>> $path
+sh: 1: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin: not found
+>> $home
+sh: 1: /home/bandit32: Permission denied
+```
+In `bash`, variables are accessed by using `$VAR`, which means the variable in caps and `$`. We can see that we can trick the `UPPERCASE SHELL` to show us system variables suck as what user is running the commands.
+
+```bash
+>> $0
+```
+`$0` is the path of the current user's shell. Because `$0` in uppercase stays the same, the program executes the shell, so now we have full access to the shell with the user's permissions.
+
+```bash
+cat /etc/bandit\_pass/bandit33 
+```
+As seen in previous levels, the passwords are in `/etc/bandit_pass/`. So we use the terminal we now access to see the next password.
+
+Password: `tQdtbs5D5i2vJwkO8mEyYEyTL8izoeJ0`
+
+## Level 33 → 34
+**At this moment, level 34 does not exist yet.**
