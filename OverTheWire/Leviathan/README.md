@@ -203,7 +203,7 @@ cd .trash
 ls -la
 ./bin
 ```
-We log in, and there is a hiiden directory `.trash`. Inside there is only one file called `bin`, and as we execute it, it prints:
+We log in, and there is a hidden directory `.trash`. Inside there is only one file called `bin`, and as we execute it, it prints:
 ```bash
 00110000 01100100 01111001 01111000 01010100 00110111 01000110 00110100 01010001 01000100 00001010
 ```
@@ -267,7 +267,7 @@ for i in {0000..9999}; do
 > ./leviathan6 $i
 > done
 ```
-After many attempts, we get access to a shell.
+This loop tries all the combinations, and as it gets to the right code we get access to a shell.
 
 ```bash
 $ whoami
