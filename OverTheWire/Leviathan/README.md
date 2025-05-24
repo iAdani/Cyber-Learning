@@ -90,11 +90,11 @@ We log in and notice the file `printfile`. When executed, it prints:
 *** File Printer ***
 Usage: ./printfile filename
 ```
-But when trying to print the password of `Leviathan3` it says:
+When trying to print the password of `Leviathan3` it says:
 ```bash
 You cant have that file...
 ```
-But, when we try to print the password for `Leviathan2` it gives a `Permission denied` error, which means that it probably has permissions to print the poassword of `Leviathan3`, so it must have the user's permissions.
+But when we try to print the password for `Leviathan2` it gives a `Permission denied` error, which means that it probably has permissions to print the poassword of `Leviathan3`, so it must have the user's permissions.
 ```bash
 ltrace ./printfile /etc/leviathan_pass/leviathan3
 ltrace ./printfile .bash_logout
@@ -157,3 +157,69 @@ chmod 777 /tmp/tmp.pb8pbUsODK
 We made a soft link to the file with the password of `Leviathan3` and called it `/tmp/tmp.pb8pbUsODK/file`. As we seen before, `access` tests the permission of the original file in the input `/tmp/tmp.pb8pbUsODK/file with spaces`, but `cat` is executed on every word separately, so it runs `cat /tmp/tmp.pb8pbUsODK/file`, and because it links to the password file, the password is being printed.
 
 Password: `f0n8h2iWLP`
+
+## Level 3 → 4
+```bash
+ls -la
+./level3
+test
+```
+As we log in, there is one file called `level3`. When executed, it asks for a password. We test a password `'test'` and it prints `bzzzzzzzzap. WRONG`.
+```bash
+ltrace ./level3
+test
+```
+We use `ltrace` to see what system functions are called and see this:
+```bash
+__libc_start_main(0x80490ed, 1, 0xffffd494, 0 <unfinished ...>
+strcmp("h0no33", "kakaka")                                        = -1
+printf("Enter the password> ")                                    = 20
+fgets(Enter the password> test
+"test\n", 256, 0xf7fae5c0)                                  = 0xffffd26c
+strcmp("test\n", "snlprintf\n")                                   = 1
+puts("bzzzzzzzzap. WRONG"bzzzzzzzzap. WRONG
+)                                        = 19
++++ exited (status 0) +++
+```
+We can see the function `strcmp` that compares strings, and it compares out input with ``snlprintf'`.
+
+```bash
+./level3
+Enter the password> snlprintf
+[You've got shell]!
+$ whoami
+leviathan4
+$ cat /etc/leviathan\_pass/leviathan4
+WG1egElCvO
+```
+We found the password, and it gives us a shell with `Leviathan4` permissions. So we print it's password from the passwords file.
+
+Password: `WG1egElCvO`
+
+## Level 4 → 5
+```bash
+ls -la
+cd .trash
+ls -la
+./bin
+```
+We log in, and there is a hiiden directory `.trash`. Inside there is only one file called `bin`, and as we execute it, it prints:
+```bash
+00110000 01100100 01111001 01111000 01010100 00110111 01000110 00110100 01010001 01000100 00001010
+```
+It looks like a binary presentation of the password, we need to convert it to `ASCII` characters.
+```bash
+mktemp -d
+./bin > /tmp/tmp.AlzfJBVPVz/binary
+for char in $(cat /tmp/tmp.AlzfJBVPVz/binary); do
+> printf "\\x$(printf '%x' $((2#$char)))"
+> done
+```
+First, we make a temp directory and copy `bin` output into a file called `binary`. Now we go through every char binary code from the file and print the `ASCII` presentation of it with `printf "\\x$(printf '%x' $((2#$char)))"`, let's explain:
+* `$((2#$char))` - This part converts the char from binary to decimal (base 2 → base 10)
+* `'%x'` - This part converts the decimal value to hex (base 10 → base 16)
+* `\\x$(printf <previous bullets>)` - This part prints the hex value as a string, and adds `'\x'` in the beggining.
+* Lastly, `printf` talkes the string we created that looks like this `'\x<hex value>'` and prints it as `ASCII`
+We do that for every char, and get the next password.
+
+Password: `0dyxT7F4QD`
