@@ -42,12 +42,12 @@ It means that all crawlers should avoid the path `/s3cr3t/`. We go into that pat
 Password: `QryZXc2e0zahULdHrtHxzyYkj59kUxLQ`
 
 ## Level 4 → 5
-We log in and the website says `authorized users should come only from "http://natas5.natas.labs.overthewire.org/"`. We don't have access to `Natas5` yet, so we need to trick the website into thinking that we were refered to this site from the specified address.
+We log in and the website says `authorized users should come only from "http://natas5.natas.labs.overthewire.org/"`. We don't have access to `Natas5` yet, so we need to trick the website into thinking that we were referred to this site from the specified address.
 
 ### `curl` command
 `curl` (Client URL) is a CLI tool for transfering data by communicating web or application servers over popular network protocols, like `HTTP`, `HTTPS`, `FTP` and more. 
 
-An HTTP request has the option to include information about which address referred it to the actual page. The `curl` command allows us to specify a referrer using the `-e` flag. Another useful flag is `-u`, it let's us specify username and password for our request. We first use this command on our terminal:
+An HTTP request has the option to include information about which address referred it to the actual page. The `curl` command allows us to specify a referrer using the `-e` flag. Another useful flag is `-u` that let's us specify username and password for our request. We first use this command on our terminal:
 ```bash
 curl -e http://natas5.natas.labs.overthewire.org/ http://natas4.natas.labs.overthewire.org/
 ```
@@ -63,9 +63,9 @@ Password: `0n35PkggAPm2zbEpOU802c0x0Msn1ToK`
 This time the website says `Access disallowed. You are not logged in`, which is weird because we just logged in.
 
 ### HTTP Cookies
-`HTTP cookies` are small text file that websites store on the user's browser. They help websites to remember information about the user in order to personalize, track activity and preferences. But more importently, they are used for login processes.
+`HTTP cookies` are small text file that websites store on the user's browser. They are mainly used by websites to remember information about the user in order to personalize and track activity and preferences. More importantly, they are used for login processes.
 
-In our case, even though we logged in, the website doesn't recognize that we are logged in. To track if a user is logged in, websites mainly use `HTTP cookies`, so that's what we should check. In the developer tools we can see the `storage` tab, and inside we can see the website's cookies. There is one cookie here, and it has a field called `loggedin`, which is set to `0`. We change it to `1` and refresh, and now the website knows we are logged in and the next password is revealed.
+In our case, even though we logged in, the website doesn't recognize that we are logged in. To track if a user is logged in, websites use `HTTP cookies`, so that's what we should check. In the developer tools we can see the `storage` tab, and inside we can see the website's cookies. There is one cookie here, and it has a field called `loggedin`, which is set to `0`. We change it to `1` and refresh, and now the website knows we are logged in and the next password is revealed.
 
 Password: `0RoJwHdSKWFTYR5WuiAewauSuNaBXned`
 
@@ -89,7 +89,7 @@ include "includes/secret.inc";
 ### PHP Language
 `PHP` (Hypertext Preprocessor) is a scripting language that is very popular for server-side in websites. It allows developers to embed dynamic code within HTML.  When a user visits a PHP-enabled page, the server processes the PHP code and sends the resulting HTML output to the browser. PHP is widely used for creating dynamic websites, handling forms and connecting to databases. It is enclosed in `<?php ... ?>` tags (possible without `php`, like in our example), variables start with `$` and the content of forms sent by `POST` request can be used with the `$_POST` variable.
 
-As we can see by the `<? ... ?>` tags, the above function is wriiten in `PHP`. That's why by viewing the sourcecode in the developer tools, we can't see this function. 
+As we can see by the `<? ... ?>` tags, the above function is written in `PHP`. That's why by viewing the sourcecode in the developer tools, we can't see this function. 
 
 Inside the function, we can see the line `include "includes/secret.inc";`. It means that a file named `includes/secret.inc` exist. We want to check it out, so we go to the path `/includes/secret.inc` and view its source code, and there is a comment with the secret input. We go back and submit the secret code, and we get the next password.
 
@@ -106,6 +106,8 @@ When viewing the page's source code, there is a hint comment:
 <!-- hint: password for webuser natas8 is in /etc/natas_webpass/natas8 -->
 ```
 
-So we want to use `Path traversal` to see the password on that path. As we've seen, the website uses `?page=` in order to view the content of `home` and `about`, that might be files in the server's directory. So by using the path `http://natas7.natas.labs.overthewire.org/index.php?page=/etc/natas_webpass/natas8`, we travel to the user's password file and get the next password.
+So we want to use `Path traversal` to see the password on that path. As we've seen, the website uses `?page=` in order to view the content of `home` and `about`, that might be files in the server's directory. So by using the path:
+```http://natas7.natas.labs.overthewire.org/index.php?page=/etc/natas_webpass/natas8```
+We travel to the user's password file and get the next password.
 
 Password: `xcoXLmzMkoIP9D7hlgPlh9XD7OgLAe5Q`
