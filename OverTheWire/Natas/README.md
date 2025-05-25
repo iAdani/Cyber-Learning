@@ -68,3 +68,44 @@ This time the website says `Access disallowed. You are not logged in`, which is 
 In our case, even though we logged in, the website doesn't recognize that we are logged in. To track if a user is logged in, websites mainly use `HTTP cookies`, so that's what we should check. In the developer tools we can see the `storage` tab, and inside we can see the website's cookies. There is one cookie here, and it has a field called `loggedin`, which is set to `0`. We change it to `1` and refresh, and now the website knows we are logged in and the next password is revealed.
 
 Password: `0RoJwHdSKWFTYR5WuiAewauSuNaBXned`
+
+## Level 6 → 7
+This time we need to find a secret input. There is also a link to view the sourcecode, so we check it and we can see that function:
+```php
+<?
+
+include "includes/secret.inc";
+
+    if(array_key_exists("submit", $_POST)) {
+        if($secret == $_POST['secret']) {
+        print "Access granted. The password for natas7 is <censored>";
+    } else {
+        print "Wrong secret";
+    }
+    }
+?>
+```
+
+### PHP Language
+`PHP` (Hypertext Preprocessor) is a scripting language that is very popular for server-side in websites. It allows developers to embed dynamic code within HTML.  When a user visits a PHP-enabled page, the server processes the PHP code and sends the resulting HTML output to the browser. PHP is widely used for creating dynamic websites, handling forms and connecting to databases. It is enclosed in `<?php ... ?>` tags (possible without `php`, like in our example), variables start with `$` and the content of forms sent by `POST` request can be used with the `$_POST` variable.
+
+As we can see by the `<? ... ?>` tags, the above function is wriiten in `PHP`. That's why by viewing the sourcecode in the developer tools, we can't see this function. 
+
+Inside the function, we can see the line `include "includes/secret.inc";`. It means that a file named `includes/secret.inc` exist. We want to check it out, so we go to the path `/includes/secret.inc` and view its source code, and there is a comment with the secret input. We go back and submit the secret code, and we get the next password.
+
+Password: `bmg8SvU1LizuWjx3y7xkNERkHxGre0GS`
+
+## Level 7 → 8
+This time there are 2 links on the page, `Home` and `About`. By clicking on Home, it adds `?page=home` to the url and displays a text saying `this is the front page`. It does a similar thing with About.
+
+### Path Traversal Attack
+`Path traversal` attack is a security vulnerability of websites that allows the attacker to access files and directories outside the website's file system location. It is done by manipulating input paths on the website. When using unintended paths, like `../` or `/etc/` for example, the attacker can travel inside the directory hierarchy and access sensitive info, such as passwords, system data and configuration files that should be restricted. This can be avoided by validating the file related operations on the server.
+
+When viewing the page's source code, there is a hint comment:
+```HTML
+<!-- hint: password for webuser natas8 is in /etc/natas_webpass/natas8 -->
+```
+
+So we want to use `Path traversal` to see the password on that path. As we've seen, the website uses `?page=` in order to view the content of `home` and `about`, that might be files in the server's directory. So by using the path `http://natas7.natas.labs.overthewire.org/index.php?page=/etc/natas_webpass/natas8`, we travel to the user's password file and get the next password.
+
+Password: `xcoXLmzMkoIP9D7hlgPlh9XD7OgLAe5Q`
