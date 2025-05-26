@@ -163,3 +163,35 @@ php decode.php
 We run our decoding program and get the input secret. After submitting it on the website, we get the next password.
 
 Password: `ZE1ck82lmdGIoErlhQgWND6j2Wzz6b6t`
+
+## Level 9 → 10
+This time we have a search input and we once again can view the source code. By viewing it, we see this `PHP` function:
+```php
+<?
+$key = "";
+
+if(array_key_exists("needle", $_REQUEST)) {
+    $key = $_REQUEST["needle"];
+}
+
+if($key != "") {
+    passthru("grep -i $key dictionary.txt");
+}
+?>
+```
+We can see that if the search key isn't empty, the program uses `passthru()`, which is similar to `exec()`, used to execute scripts and programs on the system. The program uses `grep` in order to find the search keyword in a dictionary. We can manipulate the search input to make `grep` show the next password. 
+
+### Command Injection Attack
+A `command injection attack` occurs when an attacker is able to execute system commands on a server by exploiting insecure user input handling. This typically happens when an application passes user input directly into a system command (with `exec()`, `system()`, shell calls, or like in our example, `passthru()`) without proper validation or sanitization. By injecting a well-crafted input, often using special characters like `;`, `&&`, or `|`, an attacker can run malicious commands on the system, potentially gaining unauthorized access, extracting data, or taking control of the system.
+
+We use this input for the search:
+```bash
+"" /etc/natas\_webpass/natas10 \
+```
+The search key is not empty, so The program actually executes this command:
+```bash
+grep -i "" /etc/natas\_webpass/natas10 \ dictionary.txt
+```
+`grep -i ""` will accept any line in any file, because they all include `""`, which is an empty input. Then, we make it look inside `/etc/natas_webpass/natas10` instead of the dictionary file. By ending with `\`, we "break a line" and practically avoid searching in the dictionary file. By using this command, we manipulated the website's search input into running an unintended command and giving us the next password.
+
+Password: `t7I5VHvpa14sJTUGV0cbEsbYfFP2dmOu`
