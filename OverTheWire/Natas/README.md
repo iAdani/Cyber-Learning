@@ -107,7 +107,59 @@ When viewing the page's source code, there is a hint comment:
 ```
 
 So we want to use `Path traversal` to see the password on that path. As we've seen, the website uses `?page=` in order to view the content of `home` and `about`, that might be files in the server's directory. So by using the path:
-```http://natas7.natas.labs.overthewire.org/index.php?page=/etc/natas_webpass/natas8```
+```
+http://natas7.natas.labs.overthewire.org/index.php?page=/etc/natas_webpass/natas8
+```
 We travel to the user's password file and get the next password.
 
 Password: `xcoXLmzMkoIP9D7hlgPlh9XD7OgLAe5Q`
+
+## Level 8 → 9
+Similar to the previous level, we get a link to the source code and need to find a secret input. By looking at the source code, we can see the following `PHP` function:
+```php
+<?
+
+$encodedSecret = "3d3d516343746d4d6d6c315669563362";
+
+function encodeSecret($secret) {
+    return bin2hex(strrev(base64_encode($secret)));
+}
+
+if(array_key_exists("submit", $_POST)) {
+    if(encodeSecret($_POST['secret']) == $encodedSecret) {
+    print "Access granted. The password for natas9 is <censored>";
+    } else {
+    print "Wrong secret";
+    }
+}
+?>
+```
+We can see that the secret code has been encoded, and we can see the encoding function. The encoding process uses 3 built-in `PHP` functions:
+* `base64_encode` - encode strings with `base64`. 
+* `strrev` - reverse a string.
+* `bin2hex` - convert a string (`ASCII`) to hex values.
+
+### Base64
+`base64` transforms binary data into a sequence of printable characters. It is done by taking 6 bits at a time, and mapping them into one of 64 unique characters. Data being transformed into `base64` is taking about 33% more space in memory. `base64` is used to transfer binary data across channels that only support text content. It is popular for sending email attachments, and also on the web, to embed images and binary assets inside textu format files like `HTML` and `CSS`.
+
+So now we have the encoded secret and the encoding process, we want to take the encoded secret and decode it by reversing the encoding process.
+
+```bash
+nano decode.php
+```
+In this file, we write the decoding function:
+```php
+<?php
+$encodedSecret = "3d3d516343746d4d6d6c315669563362";
+$secret = base64_decode(strrev(hex2bin($encodedSecret)));
+print $secret;
+?>
+```
+`hex2bin` does the opposite of `bin2hex`, and `base64_decode` is used to decode data that has been encoded using `bas64_encode`. So we reverse the encoding process and used it on the encoded secret we found on the website's source code to get the original secret.
+
+```bash
+php decode.php
+```
+We run our decoding program and get the input secret. After submitting it on the website, we get the next password.
+
+Password: `ZE1ck82lmdGIoErlhQgWND6j2Wzz6b6t`
