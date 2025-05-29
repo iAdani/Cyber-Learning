@@ -524,10 +524,10 @@ username=natas18" AND IF(password LIKE BINARY '$pref%', SLEEP(4),0) OR username=
 Password: `6OG1PbKdVjyBlpxgD4DDbRG6ZLlCGgCJ`
 
 ## Level 18 → 19
-The website asks for an admin user login in order to give the next password. Looking at the source code, we can see that the website using a `PHP session` to login.
+The website asks for an admin user login in order to give the next password. Looking at the source code, we can see that the website is using a `PHP session` to login.
 
 ### PHP Session Hijacking Attack
-A `PHP session hijacking attack` occurs when an attacker steals a victim's session ID (usually stored in a cookie) and uses it to impersonate the victim on a web application. Since PHP uses session IDs to identify logged-in users, obtaining a valid session ID lets the attacker bypass authentication without needing a password. This can happen through insecure cookie handling, XSS (cross-site scripting), or sniffing network traffic over unencrypted connections. Once the attacker sets the stolen session ID in their browser or HTTP requests, they gain access to the victim’s account as if they were legitimately logged in.
+A `PHP session hijacking attack` occurs when an attacker steals a victim's session ID (usually stored in a cookie) and uses it to impersonate the victim on a web application. Since PHP uses session IDs to identify logged-in users, obtaining a valid session ID lets the attacker bypass authentication without needing a password. This can happen through insecure cookie handling, `XSS` (cross-site scripting), or sniffing network traffic over unencrypted connections. Once the attacker sets the stolen session ID in their browser or HTTP requests, they gain access to the victim’s account as if they were legitimately logged in.
 
 We can see in the source code that the `PHP session ID` is just a number between 1 and 640. So we can brute force over all the session IDs and hopefully one of them is an active session of an admin.
 ```bash
@@ -552,7 +552,7 @@ This level is similar to the previous level, but session IDs are not sequental. 
 3332362d61646d696e
 3231332d61646d696e
 ```
-We can see a clear pattern, where the first 3 bytes are between 30 and 39 and the rest is `2d646667`. If we decode it as `URL encoding`, we find out the pattern; It contains random 3 digits, then a separator `-` and then the username. for example, `3132382d61646d696e` is `128-admin`. In the previous level we found the admin username, which was `natas19`, and the max ID was 640. As this level is similar, we can suggest that the username is `natas20` and brute force the random digits.
+We can see a clear pattern, where the first 3 bytes are between 30 and 39 and the rest is `2d61646d696e`. If we decode it as `URL encoding`, we find out the pattern; It contains random 3 digits, then a separator `-` and then the username. for example, `3132382d61646d696e` is `128-admin`.
 
 ```bash
 #!/bin/bash
@@ -572,4 +572,6 @@ Explaining this line ```bash (echo -n "$i" | od -An -tx1 | tr -d ' \n') ```:
 * ```bash od -An -tx1 ``` -  dumps the input as hex bytes, `-An` removes the address.
 * ```bash tr -d ' \n' ``` - removes spaces and new line.
 
-Using that script with `username=natas20` didn't work, so i changed it to `admin`. It worked, the right combination was `281-admin`, which is `3238312d61646d696e` encoded. We can see that using `URL encoding` is as safe (or not safe) as using plain text.
+Brute forcing worked, the right combination was `281-admin`, which is `3238312d61646d696e` encoded. We can see that using `URL encoding` is as safe (or not safe) as using plain text.
+
+Password: `p5mCvP7GS2K6Bmt3gqhM2Fc1A5T8MVyw`
