@@ -575,3 +575,21 @@ Explaining this line ```bash (echo -n "$i" | od -An -tx1 | tr -d ' \n') ```:
 Brute forcing worked, the right combination was `281-admin`, which is `3238312d61646d696e` encoded. We can see that using `URL encoding` is as safe (or not safe) as using plain text.
 
 Password: `p5mCvP7GS2K6Bmt3gqhM2Fc1A5T8MVyw`
+
+## Level 20 → 21
+We get an input that supposedly changes the user's `name`. Looking inside the source code, we can see some interesting things that might help. First, we can see how `admin` gets his access:
+```php
+if($_SESSION and array_key_exists("admin", $_SESSION) and $_SESSION["admin"] == 1) {
+```
+It means that if `$_SESSION` has a key named `admin` and it's set to `1`, then admin access is granted. The other 2 methods that are interesting are `myread()` and `mywrite()`, as they are used to handle sessions' data manually by the developers, which is usually a bad idea and an opportunity to find bugs.
+
+`mywrite()` creates a file dedicated to the session and saves the data inside. We can see that `ksort()` is used to sort the session keys, and the writing to the file happens in a loop for each key, which is odd because the only session key we see is `name`. `myread()` checks if a file has been created for that session ID by `mywrite()`, and if it already did, it reads the session keys from it and puts it in `$_SESSION` as a dictionary `key:value`. It is also using a loop to debug each key, although we only have one.
+
+We can see that `mywrite()` adds the keys and values to the file by using a new line for each pair with a space between them (`key value\n`), and it stores the key `name` there, which is our input. So whe can use `Burp` to make a `POST` request, using any random session id we already have, and set the data to be `name=value\nadmin 1`, which is `value%0aadmin%201` in `URL encoding`. This way, `mywrite` will write our input to a file that looks like this:
+```
+name value
+admin 1
+```
+Then, `myread()` will read it as 2 different keys, and because `$_SESSION` now has an `admin` key set to `1`, admin access is granted along with the password.
+
+Password: `BPhv63cKE1lkQl04cE5CuFTzXe15NfiH`
