@@ -593,3 +593,16 @@ admin 1
 Then, `myread()` will read it as 2 different keys, and because `$_SESSION` now has an `admin` key set to `1`, admin access is granted along with the password.
 
 Password: `BPhv63cKE1lkQl04cE5CuFTzXe15NfiH`
+
+## Level 21 → 22
+This time we have 2 pages on the website. Looking at the first page's source code, we can see that the password is granted if `$_SESSION` has an `admin` key set to `1`. On the other page, we have a form. Inside it's source code we can see that function:
+```php
+if(array_key_exists("submit", $_REQUEST)) {
+    foreach($_REQUEST as $key => $val) {
+    $_SESSION[$key] = $val;
+    }
+}
+```
+So every parameter sent by the request is stored in `_SESSION`. Using `Burp`, we simply capture the `POST` request that is being sent by the form page, adding `admin=1` to the parameters and sending. Now we take the session ID from the response, and add it to a `GET` request for the first page. Because of the funcion above, we added `admin=1` to `_SESSION`, and the password is revealed.
+
+Password: `d8rwGBl0Xslg3b76uh3fEbSlnOUBlozz`
