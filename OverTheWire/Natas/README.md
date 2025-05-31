@@ -606,3 +606,17 @@ if(array_key_exists("submit", $_REQUEST)) {
 So every parameter sent by the request is stored in `_SESSION`. Using `Burp`, we simply capture the `POST` request that is being sent by the form page, adding `admin=1` to the parameters and sending. Now we take the session ID from the response, and add it to a `GET` request for the first page. Because of the funcion above, we added `admin=1` to `_SESSION`, and the password is revealed.
 
 Password: `d8rwGBl0Xslg3b76uh3fEbSlnOUBlozz`
+
+## Level 22 → 23
+We get an empty page, only a link to the source code. Looking inside, the password is revealed only if the `GET` request has a parameter `revelio`. But there is also this part:
+```php
+if(array_key_exists("revelio", $_GET)) {
+    // only admins can reveal the password
+    if(!($_SESSION and array_key_exists("admin", $_SESSION) and $_SESSION["admin"] == 1)) {
+    header("Location: /");
+    }
+}
+```
+The idea is that anyone who is not an admin is being redirected to the normal homepage, without seeing the password. This is a bad idea, because there are many ways to avoid `redirection`. I used `Burp` to sent a `GET` request with a parameter `revelio`, and i got 2 responses. The first response had `302 Found` status code, and contained the page before being redirected, so i could see the password. The second one had `200 OK`, and was the redirection to the blank page. On a normal browser, the browser would automatically redirect us to the homepage, and we will not have a chance to see the code. But when using other tools instead of the browser, like `Burp` or `curl`, we can avoid that.
+
+Password: `dIUQcI3uSus1JEOSSWRAEXBG8KbR8tRs`
