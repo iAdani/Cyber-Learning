@@ -620,3 +620,13 @@ if(array_key_exists("revelio", $_GET)) {
 The idea is that anyone who is not an admin is being redirected to the normal homepage, without seeing the password. This is a bad idea, because there are many ways to avoid `redirection`. I used `Burp` to sent a `GET` request with a parameter `revelio`, and i got 2 responses. The first response had `302 Found` status code, and contained the page before being redirected, so i could see the password. The second one had `200 OK`, and was the redirection to the blank page. On a normal browser, the browser would automatically redirect us to the homepage, and we will not have a chance to see the code. But when using other tools instead of the browser, like `Burp` or `curl`, we can avoid that.
 
 Password: `dIUQcI3uSus1JEOSSWRAEXBG8KbR8tRs`
+
+## Level 23 → 24
+We have an input for password. Looking at the source code we can see the following condition, that if satisfied reveals the password.
+```php
+if(strstr($_REQUEST["passwd"],"iloveyou") && ($_REQUEST["passwd"] > 10 )){
+```
+`strstr()` checks if the second input is a substring of the first, so the password should contain the substing `iloveyou`. The second condition `$_REQUEST["passwd"] > 10` is the more complicated one. `PHP` will try to cast the password to a numeric value, and check if that value is greater than 10. The numeric value of `iloveyou` is 0, but by adding any value greater than 10 before that, `PHP` will cast it to that value. So, if we submit the password `11iloveyou` for example, we get the password.
+
+
+Password: `MeuqmfJ8DDKuTr5pcvzFKSwlxedZYEWd`
