@@ -630,3 +630,15 @@ if(strstr($_REQUEST["passwd"],"iloveyou") && ($_REQUEST["passwd"] > 10 )){
 
 
 Password: `MeuqmfJ8DDKuTr5pcvzFKSwlxedZYEWd`
+
+## Level 24 → 25
+We have a password input again, and we can see that in the source code:
+```php
+if(!strcmp($_REQUEST["passwd"],"<censored>")){
+            echo "<br>The credentials for the next level are:<br>";
+            echo "<pre>Username: natas25 Password: <censored></pre>";
+        }
+```
+The password input is being compared to a string, that we don't know, using `strcmp()`. `strcmp()` returns 0 if the strings are the same, otherwise 1 or -1, so because of the `!`, we need `strcmp()` to return 0. The thing is, if we use `strcmp()` to compare a string with another type of variable, like an array, it will have an error and return `NULL`, and `!NULL` is `True`. So, we manipulate the `GET` paramter to be an array by using `?passwd[]=array` in the URL, and we get the error message from `strcmp()` and also the next password.
+
+Password: `ckELKUWZUfpOv6uxS6M7lXBpBssJZ4Ws`
