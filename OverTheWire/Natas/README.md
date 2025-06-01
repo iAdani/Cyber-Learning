@@ -617,7 +617,7 @@ if(array_key_exists("revelio", $_GET)) {
     }
 }
 ```
-The idea is that anyone who is not an admin is being redirected to the normal homepage, without seeing the password. This is a bad idea, because there are many ways to avoid `redirection`. I used `Burp` to sent a `GET` request with a parameter `revelio`, and i got 2 responses. The first response had `302 Found` status code, and contained the page before being redirected, so i could see the password. The second one had `200 OK`, and was the redirection to the blank page. On a normal browser, the browser would automatically redirect us to the homepage, and we will not have a chance to see the code. But when using other tools instead of the browser, like `Burp` or `curl`, we can avoid that.
+The idea is that anyone who is not an admin is being redirected to the normal homepage without seeing the password. This is a bad idea, because there are many ways to avoid `redirection`. I used `Burp` to sent a `GET` request with a parameter `revelio`, and i got 2 responses. The first response had `302 Found` status code, and contained the page before being redirected, so i could see the password. The second one had `200 OK`, and was the redirection to the blank page. On a normal browser, the browser would automatically redirect us to the homepage, and we will not have a chance to see the password. But when using other tools instead of the browser, like `Burp` or `curl`, we can avoid redirections and see all of the responses.
 
 Password: `dIUQcI3uSus1JEOSSWRAEXBG8KbR8tRs`
 
@@ -632,13 +632,52 @@ if(strstr($_REQUEST["passwd"],"iloveyou") && ($_REQUEST["passwd"] > 10 )){
 Password: `MeuqmfJ8DDKuTr5pcvzFKSwlxedZYEWd`
 
 ## Level 24 → 25
-We have a password input again, and we can see that in the source code:
+We have another password input, and again we can see a condition that if satisfied reveals the password:
 ```php
 if(!strcmp($_REQUEST["passwd"],"<censored>")){
-            echo "<br>The credentials for the next level are:<br>";
-            echo "<pre>Username: natas25 Password: <censored></pre>";
-        }
 ```
-The password input is being compared to a string, that we don't know, using `strcmp()`. `strcmp()` returns 0 if the strings are the same, otherwise 1 or -1, so because of the `!`, we need `strcmp()` to return 0. The thing is, if we use `strcmp()` to compare a string with another type of variable, like an array, it will have an error and return `NULL`, and `!NULL` is `True`. So, we manipulate the `GET` paramter to be an array by using `?passwd[]=array` in the URL, and we get the error message from `strcmp()` and also the next password.
+The password input is being compared to a string, that we don't know, using `strcmp()`. `strcmp()` returns 0 if the strings are equal, otherwise 1 or -1. Because of the `!`, we need `strcmp()` to return a value that by adding `!`, will give a non-zero value. The thing is, if we use `strcmp()` to compare a string with another type of variable, like an array, it will have an error and return `NULL`, and `!NULL` equals 1. So, we manipulate the `GET` paramter to be an array by using `?passwd[]=array` in the URL, and we get the error message from `strcmp()` and also the next password.
 
 Password: `ckELKUWZUfpOv6uxS6M7lXBpBssJZ4Ws`
+
+## Level 25 → 26
+This page presents a quote and an input to change it's language. At the source code, we find this line:
+```php
+if(safeinclude("language/" . $_REQUEST["lang"] ))
+```
+So the code uses `safeinclude()` in order to read the file for each language. This is an opportunity for path traversal, but there are 2 validations inside `safeinclude()` that makes it harder.
+```php
+// check for directory traversal
+if(strstr($filename,"../")){
+    logRequest("Directory traversal attempt! fixing request.");
+    $filename=str_replace("../","",$filename);
+...
+// dont let ppl steal our passwords
+if(strstr($filename,"natas_webpass")){
+    logRequest("Illegal file access detected! Aborting!");
+    exit(-1);
+```
+The strings `'../'` and `'natas_webpass'` are not allowed in the input. The first validation can be overpassed by using `'....//'` instead of `'../'`. `str_replace` will replace `'../'` inside `'....//'`, so the output will be `'../'` as we want. The second validation cannot be overpassed, as long as I can tell, I tried and failed. In that case we can use path traversal attack, but the only file we cannot access is the password file.
+
+Another function inside the code is `logRequest()`, it writes the logs from the validations inside a file.
+```php
+function logRequest($message){
+        $log="[". date("d.m.Y H::i:s",time()) ."]";
+        $log=$log . " " . $_SERVER['HTTP_USER_AGENT'];
+        $log=$log . " \"" . $message ."\"\n"; 
+        $fd=fopen("/var/www/natas/natas25/logs/natas25_" . session_id() .".log","a");
+        fwrite($fd,$log);
+        fclose($fd);
+    }
+```
+Now that we know how to path traverse, we can view the logs file. We can see the location and name of the file in the function, but we don't know how many directories the code file is far from the main directory, so we have to try different amount of `'....//'` inside the input. When using this input:
+```
+....//....//....//....//....//var/www/natas/natas25/logs/natas25_i1c6n19kmkfemsk90ss0djsqk5.log
+```
+Where `i1c6n19kmkfemsk90ss0djsqk5` is out session ID, we read the logs file. It still doesn't help us yet, but if we look closely we can see `$_SERVER['HTTP_USER_AGENT']` being written inside that file. We can control the `User-Agent` variable inside our requests, so that is another input we can manipulate.
+```php
+User-Agent: <?php echo passthru("cat /etc/natas_webpass/natas26"); ?>
+```
+By setting the `User-Agent` in our request as this command, we are `command injecting`, practically tricking the server to execute the `cat` command on the password file and include it inside the log it writes. Because we use `'....//'` to see the logs file, the server writes a new log to that file while using the command we injected as `User-Agent`, and we can see the password.
+
+Password: `cVXXwxMS3Y26n5UZU89QgpGmWCelaQlE`
