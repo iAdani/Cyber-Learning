@@ -702,7 +702,7 @@ profile=O:4:"User":1:{s:4:"name";s:5:"admin";}
 ### PHP Deserializiation Attack
 A `PHP deserialization attack` happens when an application takes user-controlled input and passes it into `PHP`’s `unserialize()` function. This can be dangerous, because serialized data can contain PHP objects, and when they're deserialized, their `magic methods` (like `__wakeup()`, `__destruct()`, or `__toString()`) can be triggered — potentially running malicious code or causing logic flaws. If the application has classes that do interesting things in those `magic methods` (like writing to files, deleting files, executing commands), an attacker can craft a fake serialized object and trigger those behaviors without permission. We should never use `unserialize()` on user inputs, it is safer to use `json_encode()` and `json_decode()` instead.
 
-From the code and explanations above, to use this vulnerability we have to construct a malicious object that overrrides the `Logger` class's `__contruct()`, serialize (and in this case also `base64_encode`) it, and pass it in the `drawing` attribute inside our cookie. Then a log file will be created and we will be able to access the password through it. In order to do so, we make the following file:
+From the code and explanations above, to use this vulnerability we have to construct a malicious object that overrrides the `Logger` class `__contruct()` method, serialize (and also `base64_encode`) it, and pass it in the `drawing` attribute inside our cookie. Then a log file will be created and we will be able to access the password through it. In order to do so, we make the following file:
 ```php
 <?php
 class Logger{
@@ -726,3 +726,33 @@ Tzo2OiJMb2dnZXIiOjI6e3M6MTU6IgBMb2dnZXIAbG9nRmlsZSI7czoxODoiLi9pbWcvZmlsZW5hbWUu
 Using `Burp`, we set the cookie `drawing` property to the output we got and send a request. When it is received by the server, it `base64_decode`s and `deserialize`s it, and sets `$drawing` as the object we created. At the end of the run, `__destruct()` is called with the malicious `$logFile` and `$exitMsg` we injected, and write it into the file. Then, we visit the path `/img/filename.php` and we can see the password.
 
 Password: `u3RRffXjysjgwFU6b9xa23i6prmUsYne`
+
+## Level 27 → 28
+We have inputs for username and password. Looking at the source code we notice that this time `$query` uses `'...'` to insert users' input inside it, and all inputs are being checked by a function called `mysqli_real_escape_string()`. This is a built in function that escapes special characters in a string automatically, for example it replaces `'` with `\'`. So we can't use `SQL injection` this time, we have to find another way.
+
+When the form is submitted, the server will make several validations. The first validation is in `validUser()`, which checks if the username already exists in the database. If the username exists, it uses `checkCredentials()` to check if the password is correct, and if it is, the password is given using `dumpData()`. If such username doesn't exist, the server creates a new user with `createUser()`. The latest 3 functions are the key to our attack.
+
+First, we can see these lines inside the code:
+```sql
+CREATE TABLE `users` (
+  `username` varchar(64) DEFAULT NULL,
+  `password` varchar(64) DEFAULT NULL
+);
+```
+This is a hint, now we know that although no input validation checks it, the maximum length of `username` and `password` is 64 chars. We can also notice that `username` is not unique. in many `SQL`s, when a value is given and it's length exceeds the maximal length, it is being truncated, unless `strict mode` is enabled. We don't see if it is enabled, so it's worth trying.
+
+We first send a request with these body parameters:
+```http
+username=natas28+++++++++++++++++++++++++++++++++++++++++++++++++++++++++a&password=pass
+```
+This string is `'natas28'`, then 57 `'+'`s and we end with an `'a'`. When this input is received by the server, it first being checked by `validUser()`. There is no such user, so `createUser()` is called with these username and password. This function checks if the username is not the same after trimming, but it is because the spaces are only on the "inside", it starts and ends with valid chars. So we pass that validation and the user is created, which means the username and password are inserted into the database. At this point, the username inserted is being truncated, but only the last `'a'` is removed, the username inserted is `'natas28' + 57 spaces`. Then we use another request with this input:
+```http
+username=natas28+++++++++++++++++++++++++++++++++++++++++++++++++++++++++&password=pass
+```
+We just removed the last `'a'`. This time the server uses `validUser()` to check if this username exists and it does. So `checkCredentials()` is called and finds out the user `'natas28' + 57 spaces` exists in the database, and the passwords match. So it uses `dumpData()` to print the user's credentials, and if we look at the first line in this function:
+```php
+$user=mysqli_real_escape_string($link, trim($usr));
+```
+The input username is trimmed before injected into the query. So `'natas28' + 57 spaces` is trimmed to be `'natas28'`. So the username and password returned by the query are of `'natas28'`, and we get the password.
+
+Password: `1JNwQM1Oi6J6j1k49Xyw7ZN6pXMQInVj`
