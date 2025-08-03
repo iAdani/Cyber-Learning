@@ -793,7 +793,7 @@ Another thing we can try are special characters like `'`, `"`, and `\` inside th
 ```
 We can see that only the 4th block is different, so we assume that a `\` is added before the special characters to escape them, making the first 10 chars of the input `'AA..A\'` for both of them and therefore the 3rd block is the same. This is important because this way we can "push" special characters into the next block.
 
-Now we can assume that the server is doing the following process:
+Therefore, we can assume that the server is doing the following process:
 ```
 plaintext → escape → base64 encode → PKCS#7 pad → encrypt → base64 encode → URL encode
 ```
@@ -812,10 +812,14 @@ Now, we replace the input from last time to be `<11 spaces> + OR 1=1 -- `. We ca
 <2 start blocks> + <block for 10 spaces> + <block for "' OR 1=1 -- "> + <2 ending blocks>
 G+glEae6W/1XjA7vRm21n NyEco/c+J2TdR0Qp8dcjP ItlMM3qTizkRB5P2zYxJsb WY4bHaEWFEfgtXy4iixC3k HAmMS6zcXtk1dWTlEF3X5 k0NzIaCU2kq38vTeW0b+K
 ```
-We use this input as the query in the `GET` request and we get all the jokes, which means our injection worked. Now, we want to use this way to inject a malicious input that will give us the password. Now let's check what tables exist in that DB, we can do that by injecting this input `' UNION SELECT table_name FROM information_schema.tables -- `. Again, we add 9 A's at the beggining, and then replacing the 3rd block with the spaces block `ItlMM3qTizkRB5P2zYxJsb`. So we use this query:
+We use this input as the query in the `GET` request and we get all the jokes, which means our injection worked. Now, we want to use this way to inject a malicious input that will give us the password. Let's check what tables exist in that DB, we can do that by injecting this input `' UNION SELECT table_name FROM information_schema.tables -- `. Again, we add 9 A's at the beggining, and then replacing the 3rd block with the spaces block `ItlMM3qTizkRB5P2zYxJsb`. So we use this query:
 ```
 G%2BglEae6W%2F1XjA7vRm21nNyEco%2Fc%2BJ2TdR0Qp8dcjP ItlMM3qTizkRB5P2zYxJsb r0T1ii%2BYsw9O0BMRL2Q9HUY%2BHp7DfIbgLrY9HzzScnSwiwIQQLHbuTybkf0vfvyOoCLbaaTsQXr%2FFtPddaH%2FkEHAmMS6zcXtk1dWTlEF3X5k0NzIaCU2kq38vTeW0b%2BK
 ```
-And we get all the table names as a result. We can see `jokes` in there but the one we're intersted in is `users`. The input we want to inject now is `' UNION SELECT password FROM users; -- ` to hopefully get the password. As before, we use 9 A's and the input, then replace the 3rd block with the spaces block, and we get the next password.
+And we get all the table names as a result. We can see `jokes` in there but the one we're intersted in is `users`. The input we want to inject now is `' UNION SELECT password FROM users; -- ` to hopefully get the password. As before, we use 9 A's and the input, then replace the 3rd block with the spaces block, so be using this query
+```
+G%2BglEae6W%2F1XjA7vRm21nNyEco%2Fc%2BJ2TdR0Qp8dcjPItlMM3qTizkRB5P2zYxJsbWnPci%2FqKte0ohRTkObF%2BT5ujPcGtKfnu%2FmSL%2FsyLoz1y%2BexMySI3M79Oa4mUCUQ%2Fp36O0aq%2BC10FxP%2FmrBQjq0eOsaH%2BJhosbBUGEQmz%2Fto%3D
+```
+We get the next password.
 
 Password: `31F4j3Qi2PnuhIZQokxXk1L3QT9Cppns`
