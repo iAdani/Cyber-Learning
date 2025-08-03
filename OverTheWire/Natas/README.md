@@ -10,7 +10,7 @@ We log in as `Natas0`, and the website says `"You can find the password for the 
 Password: `0nzCigAq7t2iALyvU9xcHlYN4MlkIwlq`
 
 ## Level 1 → 2
-This time the website says the same thing, but rightclicking is blocked. We do the same as previous level and get the password.
+This time the website says the same thing, but right clicking is blocked. We do the same as previous level and get the password.
 
 Password: `TguMNxKo1DSa1tujBLuZJnDUlCcUAPlI`
 
@@ -255,7 +255,7 @@ output_char ^ input_char = key
 By XORing the known input and output, we can reveal the key used for each character.
 
 ### URL Encoding
-`URL encoding`, also known as `Percent encoding`, converts characters into a format that can be transmitted over the internet. `URL encoding` is used to replace unsafe `ASCII` characters with a `%` followed by 2 hexa digits. For example, web URLs cannot contain spaces, so spaces inside a URL is being replaced with the value `%20`. 
+`URL encoding`, also known as `Percent encoding`, converts characters into a format that can be transmitted over the internet. `URL encoding` is used to replace unsafe `ASCII` characters with a `%` followed by 2 hex digits. For example, web URLs cannot contain spaces, so spaces inside a URL is being replaced with the value `%20`. 
 
 In our case, by looking the `data` in the cookie, we can see that it ends with `%3D`, which is the URL decode for `=`. When working with the data, we need to URL decode it, so we replace the end of the data with `=`.
 
@@ -305,7 +305,7 @@ We created a file that runs a `php` code. It executes `cat` on the password file
 ```php
 <input type="hidden" name="filename" value="<?php print genRandomString(); ?>.jpg" />
 ```
-This line prevents our file from bein `.php`, all files being uploaded will end with `.jpg` because of that value. We need another way to upload the file.
+This line prevents our file from being `.php`, all files being uploaded will end with `.jpg` because of that value. We need another way to upload the file.
 
 ```bash
 curl -X POST -u natas12:yZdkjAYZRd3R7tq7T5kXMjMJlOIkzDeB natas12.natas.labs.overthewire.org/index.php -F "filename=file.php" -F "uploadedfile=@file.php"
@@ -328,7 +328,7 @@ Similar to the last level, we need to upload an image to the website. This time 
 We create the file `file.php` similar to the previous level, but this file's header is not an image type. We need to create a new file to trick `exif_imagetype()`.
 
 ### File Signature
-A `file signature` (AKA `magic numbers`) is a sequence of 2-bytes in the beggining of file, the header. It is used to identify the file type, so the systems knows how to handle them and also extra guarentee that the file is actually the type it is declared. For example, `zip` files start with the sequence `'\x50\x4B\x03\x04'` and `JPEG` files start with `'\xFF\xD8\xFF\xE0'`. For more magic numbers, visit [list of file signatures](https://en.wikipedia.org/wiki/List_of_file_signatures).
+A `file signature` (AKA `magic numbers`) is a sequence of 2-bytes in the beginning of file, the header. It is used to identify the file type, so the systems knows how to handle them and also extra guarantee that the file is actually the type it is declared. For example, `zip` files start with the sequence `'\x50\x4B\x03\x04'` and `JPEG` files start with `'\xFF\xD8\xFF\xE0'`. For more magic numbers, visit [list of file signatures](https://en.wikipedia.org/wiki/List_of_file_signatures).
 
 ```bash
 (echo -ne '\xFF\xD8\xFF\xE0'; cat file.php) > image.php
@@ -739,13 +739,11 @@ CREATE TABLE `users` (
   `password` varchar(64) DEFAULT NULL
 );
 ```
-This is a hint, now we know that although no input validation checks it, the maximum length of `username` and `password` is 64 chars. We can also notice that `username` is not unique. in many `SQL`s, when a value is given and it's length exceeds the maximal length, it is being truncated, unless `strict mode` is enabled. We don't see if it is enabled, so it's worth trying.
-
-We first send a request with these body parameters:
+This is a hint, now we know that although no input validation checks it, the maximum length of `username` and `password` is 64 chars. In many `SQL`s, when a value is given and it's length exceeds the maximal length, it is being truncated, unless `strict mode` is enabled. We don't see if it is enabled, so it's worth trying. We first send a request with these body parameters:
 ```http
 username=natas28+++++++++++++++++++++++++++++++++++++++++++++++++++++++++a&password=pass
 ```
-This string is `'natas28'`, then 57 `'+'`s and we end with an `'a'`. When this input is received by the server, it first being checked by `validUser()`. There is no such user, so `createUser()` is called with these username and password. This function checks if the username is not the same after trimming, but it is because the spaces are only on the "inside", it starts and ends with valid chars. So we pass that validation and the user is created, which means the username and password are inserted into the database. At this point, the username inserted is being truncated, but only the last `'a'` is removed, the username inserted is `'natas28' + 57 spaces`. Then we use another request with this input:
+This string is `'natas28'`, then 57 `'+'`s and we end with an `'a'`. When this input is received by the server, it first being checked by `validUser()`. There is no such user, so `createUser()` is called with these username and password. This function checks if the username is not the same after trimming, but it is because the spaces are only on the "inside", it starts and ends with valid chars. So we pass that validation and the user is created, which means the username and password are inserted into the database. At this point, the username inserted is being truncated, but only the last `'a'` is removed, so the username inserted is `'natas28' + 57 spaces`. Then we use another request with this input:
 ```http
 username=natas28+++++++++++++++++++++++++++++++++++++++++++++++++++++++++&password=pass
 ```
@@ -756,3 +754,68 @@ $user=mysqli_real_escape_string($link, trim($usr));
 The input username is trimmed before injected into the query. So `'natas28' + 57 spaces` is trimmed to be `'natas28'`. So the username and password returned by the query are of `'natas28'`, and we get the password.
 
 Password: `1JNwQM1Oi6J6j1k49Xyw7ZN6pXMQInVj`
+
+## Level 28 → 29
+This time we find a search input that gives us computer related jokes (some of them are nice) and we do not get the source code. The search results are not displayed on the same page, we are being redirected to another page, and we can notice that the `URL query` on this page is very long and looks random. By removing one of the chars in the query, we get this error:
+```
+Notice: Trying to access array offset on value of type bool in /var/www/natas/natas28/search.php on line 59
+Zero padding found instead of PKCS#7 padding
+```
+So the `URL query` has something to do with `PKCS#7 padding`. 
+
+### Block Cipher
+A `block cipher` is a method used to encrypt information. It works by taking a fixed-size group of data (`block`), usually 16 bytes, and encrypting it using a `secret key`. For example, if you have a message like "HELLO WORLD", the cipher breaks it into blocks, then encrypts each block separately. The same `secret key` is used for both encrypting and decrypting. If the message isn’t long enough to fill a block, extra `padding` is added. There are different ways to encrypt multiple blocks (called "modes"), such as `ECB` (which encrypts each block separately) or `CBC` (which links the blocks together). Block ciphers are a core part of keeping data safe in things like online banking and secure messaging.
+
+`PKCS#7` is an algorithm for padding `block ciphers`. Since the data has to be an exact multiple of the block size, `PKCS#7` adds padding to the last block. If the data is already a full block, a whole new block of padding is added. The actual padding is a sequence of bytes, each with the value equal to the number of padding bytes. For example, if the block size is 8 bytes and the plain text is `'hello'`, then the padded block will be `'hello\x03\x03\x03'`.
+
+To understand the encryption, we try some different inputs, starting with inputs of only one char. We can see that the format is the same for all of them:
+```
+G%2BglEae6W%2F1XjA7vRm21nNyEco%2Fc%2BJ2TdR0Qp8dcjP + <random 22 bytes> + vfoQVOxoUVz5bypVRFkZR5BPSyq%2FLC12hqpypTFRyXA%3D 
+```
+Next, we try different lengths of inputs to identify the encryption block size. Using `Burp`, we send `'AA...A'` as an input in different lengths. When the length is less or equal to 12, the ciphertext is 108 bytes long, but for length 13 and 14 the cipher is 128 bytes long. We can see that another block was added. But why is it happening by incresing 12 to 13 bytes and not for standard 8 or 16 bytes? Knowing about `base64_encoding`, we can assume that the plaintext is being encoded in `base64` and then padded. This is reasonable because we know that `base64 encoding` increases the size by `~33.333%`, so the block size is 16 bytes. But in the output cipher it does not split to 16 bytes, and we can see that the random block for different 1-char inputs is 22 bytes long. We can assume again that the reason is `base64 encoding`, after encrypting each block, the output is `base64 encoded` again, so the length increases again by `~33.333%`.
+
+When trying the `'AA...A'` inputs, we can notice something weird:
+```
+...
+Len 07: G+glEae6W/1XjA7vRm21nNyEco/c+J2TdR0Qp8dcjP KvwmKMYUAmbbaAruK1epuI ZIaVSupG+5Ppq4WEW09L0Nf/K3JUU/wpRwHlH118D44=
+Len 08: G+glEae6W/1XjA7vRm21nNyEco/c+J2TdR0Qp8dcjP LNQ6RxZsY7UPRe5yiycfUi iW3pCIT4YQixZ/i0rqXXY5FyMgUUg+aORY/QZhZ7MKM=
+Len 09: G+glEae6W/1XjA7vRm21nNyEco/c+J2TdR0Qp8dcjP KIFsYeK8Y3JmD4ecRfI3d+ oJUi8wHPnTascCPxZZSMWpc5zZBSL6eob5V3O1b5+MA=
+Len 10: G+glEae6W/1XjA7vRm21nNyEco/c+J2TdR0Qp8dcjP JfIqcn9iVBmkZvmvU4kfmy c4pf+0pFACRndRda5Za71vNN8znGntzhH2ZQu87WJwI=
+Len 11: G+glEae6W/1XjA7vRm21nNyEco/c+J2TdR0Qp8dcjP JfIqcn9iVBmkZvmvU4kfmy NjNpR93/Bz0TLCI5HmVRCMqM9OYQkTq645oGdhkgSlo=
+Len 12: G+glEae6W/1XjA7vRm21nNyEco/c+J2TdR0Qp8dcjP JfIqcn9iVBmkZvmvU4kfmy h1J9Q3czmMbvHxFKUToAKHX9UET9Bj0m9rt/c0tByJk=
+```
+As we can see, for inputs of length 1-9, the 3rd block is different each time. But for inputs of length 10-12, the 3rd block stays the same. We can assume that the first 10 chars of the input are included in the 3rd block, and the 11 and 12 chars are part of the ending blocks.
+
+Another thing we can try are special characters like `'`, `"`, and `\` inside the input. When we use an input of 11 'A' and then a special character, a new block is created. But the length is 12 bytes as before, then why is that happening? We can assume that the reason is escaping, the server adds `\` before those to avoid `SQL injections`. To justify that, we will try 9 'A' and then a special character that should be escaped, for example `'` and `"`. This is the result:
+```
+': G+glEae6W/1XjA7vRm21n NyEco/c+J2TdR0Qp8dcjP IWJ2pwLjKxd0ddiQ3a1c5l stdkbwCSkbjZzJR1Froznc qM9OYQkTq645oGdhkgSlo=
+": G+glEae6W/1XjA7vRm21n NyEco/c+J2TdR0Qp8dcjP IWJ2pwLjKxd0ddiQ3a1c5l e0uzFQTQyTJF5uPUK3I8gM qM9OYQkTq645oGdhkgSlo=
+```
+We can see that only the 4th block is different, so we assume that a `\` is added before the special characters to escape them, making the first 10 chars of the input `'AA..A\'` for both of them and therefore the 3rd block is the same. This is important because this way we can "push" special characters into the next block.
+
+Now we can assume that the server is doing the following process:
+```
+plaintext → escape → base64 encode → PKCS#7 pad → encrypt → base64 encode → URL encode
+```
+Now that we know the process, we can try to mimic that with an input we craft, so we can avoid the escaping of special characters and try to do `SQL injection`. First, we want to try a simple `' OR 1=1 -- ` injection. To do so, we can use the server's escaping to "push" the `'` to the second block. So we use an input that looks like this:
+```
+<9 time 'A'> + "' OR 1=1 -- "
+```
+The space after `--` is important, so the block is exactly 12 bytes. The output looks like this:
+```
+<2 start blocks> + <block for 9 'A' + '\'> + <block for "' OR 1=1 -- "> + <2 ending blocks>
+G+glEae6W/1XjA7vRm21n NyEco/c+J2TdR0Qp8dcjP IWJ2pwLjKxd0ddiQ3a1c5l WY4bHaEWFEfgtXy4iixC3k HAmMS6zcXtk1dWTlEF3X5 k0NzIaCU2kq38vTeW0b+K
+```
+
+Now, we replace the input from last time to be `<11 spaces> + OR 1=1 -- `. We can extract the 3rd block from the output (as we know it's length is 22 bytes and we know the first 2 blocks), and we get `ItlMM3qTizkRB5P2zYxJsb`, which is a block full of spaces. Now, we replace the 3rd block from earlier with this block, and we get this:
+```
+<2 start blocks> + <block for 10 spaces> + <block for "' OR 1=1 -- "> + <2 ending blocks>
+G+glEae6W/1XjA7vRm21n NyEco/c+J2TdR0Qp8dcjP ItlMM3qTizkRB5P2zYxJsb WY4bHaEWFEfgtXy4iixC3k HAmMS6zcXtk1dWTlEF3X5 k0NzIaCU2kq38vTeW0b+K
+```
+We use this input as the query in the `GET` request and we get all the jokes, which means our injection worked. Now, we want to use this way to inject a malicious input that will give us the password. Now let's check what tables exist in that DB, we can do that by injecting this input `' UNION SELECT table_name FROM information_schema.tables -- `. Again, we add 9 A's at the beggining, and then replacing the 3rd block with the spaces block `ItlMM3qTizkRB5P2zYxJsb`. So we use this query:
+```
+G%2BglEae6W%2F1XjA7vRm21nNyEco%2Fc%2BJ2TdR0Qp8dcjP ItlMM3qTizkRB5P2zYxJsb r0T1ii%2BYsw9O0BMRL2Q9HUY%2BHp7DfIbgLrY9HzzScnSwiwIQQLHbuTybkf0vfvyOoCLbaaTsQXr%2FFtPddaH%2FkEHAmMS6zcXtk1dWTlEF3X5k0NzIaCU2kq38vTeW0b%2BK
+```
+And we get all the table names as a result. We can see `jokes` in there but the one we're intersted in is `users`. The input we want to inject now is `' UNION SELECT password FROM users; -- ` to hopefully get the password. As before, we use 9 A's and the input, then replace the 3rd block with the spaces block, and we get the next password.
+
+Password: `31F4j3Qi2PnuhIZQokxXk1L3QT9Cppns`
