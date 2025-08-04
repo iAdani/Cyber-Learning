@@ -823,3 +823,20 @@ G%2BglEae6W%2F1XjA7vRm21nNyEco%2Fc%2BJ2TdR0Qp8dcjPItlMM3qTizkRB5P2zYxJsbWnPci%2F
 We get the next password.
 
 Password: `31F4j3Qi2PnuhIZQokxXk1L3QT9Cppns`
+
+## Level 29 → 30
+In this page, we have a dropdown menu that loads and shows `Perl` files. Common attack on `Perl` is a command injection, and it is done by adding `|` or `;` before the injected command as an input, in order to run other commands with the command executed. An important note is, for the injection to actually work, it must end with null (`%00`).
+
+The file name is passed as a parameter `file` in the `GET` request, so by changing the parameter to `|whoami%00` we get the output `natas29`. So the injection works, and the server is located in this directory. Now, we can easily print the password in the same way, by injecting `|cat /etc/natas_webpass/natas30%00`. But after trying, it doesn't work. we get a `meeeeeep!` as an output, which means the server knows we tried to print the password and avoided it.
+
+Looking at the URL, we can see that the `homepage` (`/`) navigates us to the `index.pl` file. So, in order to understand what defence uses the server to avoid the injection, we can use the injection again to see that file by using `|cat index.pl%00`. It works, and we can see this `if` in the source code:
+```
+if($f=~/natas/){
+    print "meeeeeep!<br>";
+}
+```
+The server uses `regex` and if the input has the word `natas` in it, it prints the `meeeeeep!` message instead of the file requested. So, we need a way to avoid using the word `natas`, but still need to print the password file.
+
+In `Perl`, we can use `?` as a `wild card` in order to search a file. In this case, we can use `?atas` instead of `natas` and it will automatically use this command on all files that ends with `atas`, including the `natas` file. So by using this command: `|cat /etc/?atas_webpass/?atas30%00`, the file is printed and we get the next password.
+
+Password: `WQhx1BvcmP9irs2MP9tRnLsNaDI76YrH`
