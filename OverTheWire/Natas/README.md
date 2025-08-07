@@ -840,3 +840,16 @@ The server uses `regex` and if the input has the word `natas` in it, it prints t
 In `Perl`, we can use `?` as a `wild card` in order to search a file. In this case, we can use `?atas` instead of `natas` and it will automatically use this command on all files that ends with `atas`, including the `natas` file. So by using this command: `|cat /etc/?atas_webpass/?atas30%00`, the file is printed and we get the next password.
 
 Password: `WQhx1BvcmP9irs2MP9tRnLsNaDI76YrH`
+
+## Level 30 → 31
+This time we find the good old username and password fields, so we should probably use `SQL injection`. We also get the source code, and it has been written in `Perl`. The key in this code is the following line:
+```
+my $query="Select * FROM users where username =".$dbh->quote(param('username')) . " and password =".$dbh->quote(param('password')); 
+```
+As [this answer](https://security.stackexchange.com/questions/175703/is-this-perl-database-connection-vulnerable-to-sql-injection/175872#175872) explains, `quote()` can be exposed by sending multiple values of the same parameter. As shown [here](https://www.oreilly.com/library/view/programming-the-perl/1565926994/re43.html), it will treat it as 2 arguments for the function, and will use the second value as the type of the first one. If the type is not a string, `quote()` will not add any quotes to the value and therefore we will be able to perform an injection. By sending these params:
+```
+username=name&password='pass'%20or%201%3d1&password=2
+```
+We make the server use `name` as the username and `pass or 1=1` as the password, while treating it as a non-string type (as shown [here](https://www.nntp.perl.org/group/perl.dbi.dev/2001/11/msg485.html?ref=learnhacking.io), we could also use other data types). So no quotes are added, our `SQL injection` works and we get the next password.
+
+Password: `m7bfjAHpJmSYgQWWeqRE2qVBuMiRNq0y`
