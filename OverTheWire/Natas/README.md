@@ -916,3 +916,10 @@ This is the first file uploaded, and as discussed earlier, it only contains `"AR
 It's worth mentioning that according to the source, adding `|` at the end of the URL will make Perl execute a command instead of just reading that as a file descriptor. Therefore, another way is adding `?cat%20/etc/natas_webpass/natas32%20|` to the URL, while making the same `ARGV` change as before.
 
 Password: `NaIWhW2VIrKqrc7aroJVHOZvk3RQMi0B`
+
+## Level 32 → 33
+We have this file uploading form again, but this time it says "There is a binary in the webroot that you need to execute.". As we did in the last level, we already know how to execute a command using `The Perl Jam 2` vulnerability. So, we do the same as last level, capturing a request and adding an `"ARGV"` file.
+
+In order to see the files in the webroot directory, we add `?ls%20.%20|` to the URL. We can see the files in the webroot, one of them is called `getpassword`. So we change the URL and this time we add `?./getpassword%20|`. The file is executed and we get the next password.
+
+Password: `2v9nDlbSF7jvawaCncr5Z9kSzkmBeoCJ`
